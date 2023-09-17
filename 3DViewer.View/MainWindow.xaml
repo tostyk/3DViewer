@@ -12,7 +12,7 @@
         <vm:MainVM/>
     </Window.DataContext>
     <Grid>
-        <Image Source="{Binding Image}">
+        <Image Source="{Binding Bitmap}">
             <i:Interaction.Triggers>
                 <i:EventTrigger EventName="MouseDown">
                     <i:InvokeCommandAction Command="{Binding MouseDownCommand}" />
