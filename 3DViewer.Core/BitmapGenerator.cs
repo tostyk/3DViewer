@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Numerics;
+using System.Runtime.InteropServices;
 
 namespace _3DViewer.Core
 {
@@ -6,7 +7,7 @@ namespace _3DViewer.Core
     {
         public const int RGBA = 4;
         private readonly ObjVertices _objVertices;
-        private int scale = 100;
+        private int scale = 250;
         private int xOffset;
         private int yOffset;
 
@@ -15,8 +16,8 @@ namespace _3DViewer.Core
         {
             _objVertices = objVertices;
             _image = new byte[height, width, RGBA];
-            xOffset = _image.GetLength(0) / 2 - 1;
-            yOffset = _image.GetLength(1) / 2 - 1;
+            xOffset = _image.GetLength(1) / 2 - 1;
+            yOffset = _image.GetLength(0) / 2 - 1;
         }
 
         public byte[,,] GenerateImage()
@@ -33,19 +34,31 @@ namespace _3DViewer.Core
                 }
             }
 
-
             foreach (var polygon in _objVertices.polygons)
             {
                 for (int i = 0; i < polygon.Count; i++)
                 {
+
+                    /*
+                     * 
+                     * 
+                     * WARNING!! PAY ATTENTION TO Y AND Z
+                     * 
+                     * 
+                     */
                     DDALine(
                          _objVertices.vertices[polygon[i] - 1].X,
                          _objVertices.vertices[polygon[(i + 1) % polygon.Count] - 1].X,
-                         _objVertices.vertices[polygon[i] - 1].Y,
-                         _objVertices.vertices[polygon[(i + 1) % polygon.Count] - 1].Y
+                         _objVertices.vertices[polygon[i] - 1].Z,
+                         _objVertices.vertices[polygon[(i + 1) % polygon.Count] - 1].Z
                          );
                 }
             }
+
+
+            DDALine( 0, 0, (yOffset - 1)/scale, -(yOffset - 1) / scale);
+            DDALine((xOffset) / scale, - (xOffset - 1) / scale, 0, 0);
+
             return _image;
         }
 
@@ -63,18 +76,10 @@ namespace _3DViewer.Core
             float dx = (x1 - x0) / L;
             float dy = (y1 - y0) / L;
 
-            int X = Convert.ToInt32(x0 + xOffset);
-            int Y = Convert.ToInt32(y0 + yOffset);
-
-            _image[Y, X, 1] = 255;
-            _image[Y, X, 2] = 255;
-            _image[Y, X, 3] = 255;
-            _image[Y, X, 0] = 255;
-
             for (int i = 0; i < L; i++)
             {
-                X = Convert.ToInt32(X + dx);
-                Y = Convert.ToInt32(Y + dy);
+                int X = Convert.ToInt32(x0 + dx*i + xOffset);
+                int Y = Convert.ToInt32(y0 + dy*i + yOffset);
 
                 _image[Y, X, 1] = 255;
                 _image[Y, X, 2] = 255;

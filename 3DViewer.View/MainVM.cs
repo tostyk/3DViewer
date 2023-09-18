@@ -33,9 +33,8 @@ namespace _3DViewer.View
 
         public MainVM()
         {
-
-            int w = 2000;
-            int h = 1500;
+            int w = 1500;
+            int h = 2000;
             // длину и ширину по-хорошему нужно получать в рантайме
             _bitmap = new(w, h, 96, 96, PixelFormats.Bgr32, null);
 
