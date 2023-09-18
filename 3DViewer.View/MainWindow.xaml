@@ -12,18 +12,12 @@
         <vm:MainVM/>
     </Window.DataContext>
     <Grid>
-        <Image Source="{Binding Bitmap}">
-            <i:Interaction.Triggers>
-                <i:EventTrigger EventName="MouseDown">
-                    <i:InvokeCommandAction Command="{Binding MouseDownCommand}" />
-                </i:EventTrigger>
-                <i:EventTrigger EventName="MouseUp">
-                    <i:InvokeCommandAction Command="{Binding MouseUpCommand}" />
-                </i:EventTrigger>
-                <i:EventTrigger EventName="MouseMove">
-                    <i:InvokeCommandAction Command="{Binding MouseMoveCommand}" />
-                </i:EventTrigger>
-            </i:Interaction.Triggers>
+        <Image Source="{Binding Bitmap}"
+               MouseDown="Image_MouseDown"
+               MouseMove="Image_MouseMove"
+               MouseUp="Image_MouseUp"
+               MouseWheel="Image_MouseWheel">
+            
         </Image>
     </Grid>
 </Window>
