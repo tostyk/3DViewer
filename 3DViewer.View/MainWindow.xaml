@@ -7,17 +7,17 @@
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:vm="clr-namespace:_3DViewer.View"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="450" Width="800" KeyDown="Window_KeyDown">
     <Window.DataContext>
         <vm:MainVM/>
     </Window.DataContext>
-    <Grid>
+    <Grid >
         <Image Source="{Binding Bitmap}"
                MouseDown="Image_MouseDown"
                MouseMove="Image_MouseMove"
                MouseUp="Image_MouseUp"
-               MouseWheel="Image_MouseWheel">
-            
+               MouseWheel="Image_MouseWheel"
+               >
         </Image>
     </Grid>
 </Window>

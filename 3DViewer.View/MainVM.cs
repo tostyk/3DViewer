@@ -1,13 +1,20 @@
 ﻿using _3DViewer.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using _3DViewer;
+using System.Reflection;
+using System.Resources;
+using System.Runtime.Versioning;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace _3DViewer.View
 {
@@ -19,6 +26,21 @@ namespace _3DViewer.View
         private BitmapGenerator _bitmapGenerator;
         private bool _rotation = false;
         private Point _prevPoint;
+
+        private float scale = 0.5f;
+        private float sensitivity = 0.7f;
+
+        private int w = 2000;
+        private int h = 1000;
+
+        private float rotationX = 0;
+        private float rotationY = 0;
+        private float rotationZ = 0;
+
+
+        private float translationX = 0;
+        private float translationY = 0;
+        private float translationZ = 0;
 
         static MainVM()
         {
@@ -40,24 +62,80 @@ namespace _3DViewer.View
         public ICommand MouseUpCommand { get; }
         public ICommand MouseMoveCommand { get; }
         public ICommand MouseWheelCommand { get; }
+
+        public ICommand KeyDownCommand { get; }
+
         public MainVM()
         {
-            int w = 2500;
-            int h = 2000;
             // длину и ширину по-хорошему нужно получать в рантайме
             _bitmap = new(w, h, 96, 96, PixelFormats.Bgr32, null);
 
-            _objVertices.ParseObj("sphere.obj");
+            var cat = Resource.cat;
+            MemoryStream stream = new ();
+            stream.Write(cat, 0, cat.Length);
+
+            _objVertices.ParseObj(stream);
             _bitmapGenerator = new BitmapGenerator(_objVertices, w, h);
-
-            byte[,,] btm = _bitmapGenerator.GenerateImage();
-            Bitmap.WritePixels(new Int32Rect(0, 0, w, h), btm.Cast<byte>().ToArray(), w*4, 0);
-            //Bitmap = Bitmap.Clone();
-
+            Render();
             MouseDownCommand = new RelayCommand<Point>((point) => MouseDown(point));
             MouseUpCommand = new RelayCommand(MouseUp);
             MouseMoveCommand = new RelayCommand<Point>((point) => MouseMove(point));
             MouseWheelCommand = new RelayCommand<int>((delta) => MouseWheel(delta));
+
+            KeyDownCommand = new RelayCommand<Key>((key) => KeyDown(key));
+        }
+
+        private void Render()
+        {
+            byte[,,] btm = _bitmapGenerator.GenerateImage(rotationX, rotationY, rotationZ, translationX, translationY, translationZ, scale);
+            Bitmap.WritePixels(new Int32Rect(0, 0, w, h), btm.Cast<byte>().ToArray(), w * 4, 0);
+        }
+
+        private void KeyDown(Key key)
+        {
+            float rotMin = (float)(Math.PI / 16);
+            float transMin = 5.0f;
+
+            switch (key)
+            {
+                case Key.Left:
+                    rotationY -= rotMin;
+                    break;
+                case Key.Right:
+                    rotationY += rotMin;
+                    break;
+                case Key.Up:
+                    rotationX -= rotMin;
+                    break;
+                case Key.Down:
+                    rotationX += rotMin;
+                    break;
+                case Key.OemComma:
+                    rotationZ -= rotMin;
+                    break;
+                case Key.OemPeriod:
+                    rotationZ += rotMin;
+                    break;
+
+                case Key.W:
+                    translationY += transMin;
+                    break;
+                case Key.A:
+                    translationX -= transMin;
+                    break;
+                case Key.S:
+                    translationY -= transMin;
+                    break;
+                case Key.D:
+                    translationX += transMin;
+                    break;
+            }
+
+            rotationX %= (float)Math.PI * 2;
+            rotationY %= (float)Math.PI * 2;
+            rotationZ %= (float)Math.PI * 2;
+
+            Render();
         }
 
         private void MouseDown(Point point)
@@ -76,16 +154,21 @@ namespace _3DViewer.View
         {
             if (_rotation)
             {
-
+                
             }
         }
         private void MouseWheel(int delta)
         {
-            //int w = 2500;
-            //int h = 2000;
-            //byte[,,] btm = _bitmapGenerator.GenerateImage(100 + delta);
+            if(delta > 0)
+            {
+                scale /= sensitivity;
+            }
+            else
+            {
+                scale *= sensitivity;
+            }
 
-            //Bitmap.WritePixels(new Int32Rect(0, 0, w, h), btm.Cast<byte>().ToArray(), w * 4, 0);
+            Render();
         }
     }
 }

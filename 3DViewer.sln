@@ -5,7 +5,7 @@ VisualStudioVersion = 17.7.34024.191
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "3DViewer.Core", "3DViewer.Core\3DViewer.Core.csproj", "{AB2063D1-7DC3-4FF5-8D98-6296F0AAC2C8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "3DViewer.View", "3DViewer.View\3DViewer.View.csproj", "{0C232E11-2C49-4A8F-9021-6A05C837E048}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "3DViewer.View", "3DViewer.View\3DViewer.View.csproj", "{0C232E11-2C49-4A8F-9021-6A05C837E048}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

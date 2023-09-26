@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using System.Text.RegularExpressions;
 
 namespace _3DViewer.Core
 {
@@ -9,19 +10,26 @@ namespace _3DViewer.Core
         public Vector3[] Normals = Array.Empty<Vector3>();
         public int[][] Polygons = Array.Empty<int[]>();
 
-        public void ParseObj(string filePath)
+        public void ParseObj(MemoryStream stream)
         {
             List<int[]> polygons = new();
             List<Vector3> vertices = new();
             List<Vector3> textureVertices = new();
             List<Vector3> normal = new();
+            string[] lines;
 
-            string[] lines = File.ReadAllLines(filePath);
+            using (StreamReader reader = new StreamReader(stream))
+            {
+                reader.BaseStream.Seek(0, SeekOrigin.Begin);
+                var a = reader.ReadToEnd();
+                lines = a.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            }
+
             foreach (string line in lines)
             {
                 if (line.Trim() == "") continue;
 
-                IEnumerable<string> elements = line.Split(' ');
+                IEnumerable<string> elements = line.Split(new char[0], StringSplitOptions.RemoveEmptyEntries);
                 if (!elements.Any()) continue;
 
                 string character = elements.First();
