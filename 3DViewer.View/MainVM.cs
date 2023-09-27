@@ -27,20 +27,12 @@ namespace _3DViewer.View
         private bool _rotation = false;
         private Point _prevPoint;
 
-        private float scale = 0.5f;
         private float sensitivity = 0.7f;
 
         private int w = 2000;
         private int h = 1000;
 
-        private float rotationX = 0;
-        private float rotationY = 0;
-        private float rotationZ = 0;
-
-
-        private float translationX = 0;
-        private float translationY = 0;
-        private float translationZ = 0;
+        byte[,,] btm;
 
         static MainVM()
         {
@@ -70,13 +62,16 @@ namespace _3DViewer.View
             // длину и ширину по-хорошему нужно получать в рантайме
             _bitmap = new(w, h, 96, 96, PixelFormats.Bgr32, null);
 
-            var cat = Resource.cat;
-            MemoryStream stream = new ();
+            var cat = Resource.spider;
+            MemoryStream stream = new MemoryStream();
             stream.Write(cat, 0, cat.Length);
 
             _objVertices.ParseObj(stream);
             _bitmapGenerator = new BitmapGenerator(_objVertices, w, h);
-            Render();
+            btm = _bitmapGenerator.GenerateImage();
+            Bitmap.Lock();
+            Bitmap.WritePixels(new Int32Rect(0, 0, w, h), btm.Cast<byte>().ToArray(), w * 4, 0);
+            Bitmap.Unlock();
             MouseDownCommand = new RelayCommand<Point>((point) => MouseDown(point));
             MouseUpCommand = new RelayCommand(MouseUp);
             MouseMoveCommand = new RelayCommand<Point>((point) => MouseMove(point));
@@ -85,57 +80,83 @@ namespace _3DViewer.View
             KeyDownCommand = new RelayCommand<Key>((key) => KeyDown(key));
         }
 
-        private void Render()
-        {
-            byte[,,] btm = _bitmapGenerator.GenerateImage(rotationX, rotationY, rotationZ, translationX, translationY, translationZ, scale);
-            Bitmap.WritePixels(new Int32Rect(0, 0, w, h), btm.Cast<byte>().ToArray(), w * 4, 0);
-        }
 
         private void KeyDown(Key key)
         {
             float rotMin = (float)(Math.PI / 16);
-            float transMin = 5.0f;
+            float transMin = 125.0f;
+            float cameraDelta = 125.0f;
 
             switch (key)
             {
                 case Key.Left:
-                    rotationY -= rotMin;
+                    btm = _bitmapGenerator.Rotate(-rotMin, 0, 0);
                     break;
                 case Key.Right:
-                    rotationY += rotMin;
+                    btm = _bitmapGenerator.Rotate(rotMin, 0, 0);
                     break;
                 case Key.Up:
-                    rotationX -= rotMin;
+                    btm = _bitmapGenerator.Rotate(0, -rotMin, 0);
                     break;
                 case Key.Down:
-                    rotationX += rotMin;
+                    btm = _bitmapGenerator.Rotate(0, rotMin, 0);
                     break;
                 case Key.OemComma:
-                    rotationZ -= rotMin;
+                    btm = _bitmapGenerator.Rotate(0, 0, -rotMin);
                     break;
                 case Key.OemPeriod:
-                    rotationZ += rotMin;
+                    btm = _bitmapGenerator.Rotate(0, 0, rotMin);
                     break;
 
                 case Key.W:
-                    translationY += transMin;
+                    btm = _bitmapGenerator.Translate(0, -transMin, 0);
                     break;
                 case Key.A:
-                    translationX -= transMin;
+                    btm = _bitmapGenerator.Translate(-transMin, 0, 0);
                     break;
                 case Key.S:
-                    translationY -= transMin;
+                    btm = _bitmapGenerator.Translate(0, transMin, 0);
                     break;
                 case Key.D:
-                    translationX += transMin;
+                    btm = _bitmapGenerator.Translate(transMin, 0, 0);
                     break;
+                case Key.E:
+                    btm = _bitmapGenerator.Translate(0, 0, -transMin);
+                    break;
+                case Key.Q:
+                    btm = _bitmapGenerator.Translate(0, 0, transMin);
+                    break;
+
+                case Key.OemMinus:
+                    btm = _bitmapGenerator.Scale(sensitivity);
+                    break;
+                case Key.OemPlus:
+                    btm = _bitmapGenerator.Scale(1 / sensitivity);
+                    break;
+
+                case Key.NumPad2:
+                    btm = _bitmapGenerator.ChangeCameraPosition(0, 0, -cameraDelta);
+                    break;
+                case Key.NumPad8:
+                    btm = _bitmapGenerator.ChangeCameraPosition(0, 0, cameraDelta);
+                    break;
+                case Key.NumPad4:
+                    btm = _bitmapGenerator.ChangeCameraPosition(-cameraDelta, 0, 0);
+                    break;
+                case Key.NumPad6:
+                    btm = _bitmapGenerator.ChangeCameraPosition(cameraDelta, 0, 0);
+                    break;
+                case Key.NumPad7:
+                    btm = _bitmapGenerator.ChangeCameraPosition(0, cameraDelta, 0);
+                    break;
+                case Key.NumPad9:
+                    btm = _bitmapGenerator.ChangeCameraPosition(0, -cameraDelta, 0);
+                    break;
+
             }
-
-            rotationX %= (float)Math.PI * 2;
-            rotationY %= (float)Math.PI * 2;
-            rotationZ %= (float)Math.PI * 2;
-
-            Render();
+            Bitmap.Lock();
+            Bitmap.WritePixels(new Int32Rect(0, 0, w, h), btm.Cast<byte>().ToArray(), w * 4, 0);
+            Bitmap.Unlock();
         }
 
         private void MouseDown(Point point)
@@ -159,16 +180,7 @@ namespace _3DViewer.View
         }
         private void MouseWheel(int delta)
         {
-            if(delta > 0)
-            {
-                scale /= sensitivity;
-            }
-            else
-            {
-                scale *= sensitivity;
-            }
-
-            Render();
+           
         }
     }
 }
