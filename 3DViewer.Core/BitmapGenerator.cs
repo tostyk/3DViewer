@@ -5,35 +5,55 @@ namespace _3DViewer.Core
     public class BitmapGenerator
     {
         public const int ARGB = 4;
+        public const float ScaleSize = 10;
         private readonly ObjVertices _modelCoordinates;
         private readonly ObjVertices _currCoordinates;
-        public readonly int Width;
-        public readonly int Height;
-        public Vector3 up = new(0, 1, 0);
-        public Vector3 target = new(0, 0, 0);
-        public Vector3 Camera = new(0, 1, -1000);
-        private Color BackgroundColor = new(0, 0, 0, 0);
+        private readonly int _width;
+        private readonly int _height;
+        private Vector3 up = new(0, 1, 0);
+        private Vector3 target = new(0, 0, 0);
+        private Vector3 _camera = new(0, 0, ScaleSize * 5);
+        private Vector3 _rotation;
 
-        public float scale = 0.5f;
+        private Vector3 ToCameraVector(Vector3 sphereVector)
+        {
+            return new Vector3
+            {
+                X = (float)(sphereVector.Z * Math.Sin(sphereVector.Y) * Math.Cos(sphereVector.X)),
+                Y = (float)(sphereVector.Z * Math.Sin(sphereVector.Y) * Math.Sin(sphereVector.X)),
+                Z = (float)(sphereVector.Z * Math.Cos(sphereVector.Y)),
+            };
+        }
+        private Vector3 ToSphereVector(Vector3 cameraVector)
+        {
+            return new Vector3
+            {
+                X = (float)Math.Atan(
+                    cameraVector.X == 0 
+                        ? double.PositiveInfinity 
+                        : cameraVector.Y / cameraVector.X),
+                Y = (float)Math.Atan(Math.Sqrt(cameraVector.X * cameraVector.X + cameraVector.Y * cameraVector.Y) / cameraVector.Z),
+                Z = (float)Math.Sqrt(
+                    cameraVector.X * cameraVector.X + 
+                    cameraVector.Y * cameraVector.Y + 
+                    cameraVector.Z * cameraVector.Z),
+            };
+        }
 
-        public float xmin = -20f;
-        public float ymin = -20f;
+        private Matrix4x4 _normalizationMatrix = Matrix4x4.Identity;
+        private Color BackgroundColor = new(255, 255, 255, 255);
 
-        public float zfar = 20.0f;
-        public float znear = 1.0f;
-        public float aspect = 2.0f;
-        public float FOV = (float)(Math.PI / 4);
-
+        private float zfar = 100f;
+        private float znear = 0.01f;
+        private float _aspect;
+        public const float FOV = (float)(Math.PI / 4); // 45deg Yaxis, 90deg Xaxis
 
         private Matrix4x4 currViewport;
         private Matrix4x4 currProjection;
         private Matrix4x4 currView;
         private Matrix4x4 currModel;
 
-        private float _side;
-
-        private readonly byte[,,] _image;
-
+        private readonly byte[] _image;
 
         public BitmapGenerator(
             ObjVertices modelCoordinates, 
@@ -41,19 +61,14 @@ namespace _3DViewer.Core
             int height
             )
         {
+            _image = new byte[height * width * ARGB];
+            _width = width;
+            _height = height;
+
             _modelCoordinates = modelCoordinates;
-            _image = new byte[height, width, ARGB];
-            Width = width;
-            Height = height;
+            _normalizationMatrix = Normalize();
 
-            _side = Math.Min( Width, Height ) / 2;
-
-            ymin = -_side/2;
-            xmin = -_side/2;
-
-            zfar = _side;
-
-            target = new(_side, _side, -_side);
+            _aspect = _width / _height;
 
             _currCoordinates = new ObjVertices
             {
@@ -69,16 +84,37 @@ namespace _3DViewer.Core
             currModel = Model();
         }
 
-        public byte[,,] GenerateImage()
+        private Matrix4x4 Normalize()
+        {
+            Matrix4x4 matrix = Matrix4x4.Identity;
+            Vector3 max = new(
+                _modelCoordinates.Vertices.Max(v => v.X),
+                _modelCoordinates.Vertices.Max(v => v.Y),
+                _modelCoordinates.Vertices.Max(v => v.Z)
+                );
+            Vector3 min = new(
+                _modelCoordinates.Vertices.Min(v => v.X),
+                _modelCoordinates.Vertices.Min(v => v.Y),
+                _modelCoordinates.Vertices.Min(v => v.Z)
+                );
+            Vector3 avg = (min + max) / 2;
+            Vector3 scaleVector = (max - min) / 2;
+            float scale = Math.Max(Math.Max(scaleVector.X, scaleVector.Y), scaleVector.Z);
 
+            matrix.Translation = -avg;
+            matrix *= Matrix4x4.CreateScale(1f / scale * 10);
+            return matrix;
+        }
+
+        public byte[] GenerateImage()
         {
             ClearImage();
 
             Matrix4x4 resultMatrix =
-                currViewport *
-                currProjection *
+                currModel *
                 currView *
-                currModel;
+                currProjection *
+                currViewport;
             RecountCoordinates(resultMatrix, _modelCoordinates.Vertices);
 
             DrawPolygons();
@@ -86,27 +122,9 @@ namespace _3DViewer.Core
             return _image;
         }
 
-        public byte[,,] ChangeCameraPosition(float deltaX, float deltaY, float deltaZ)
+        public void ChangeCameraPosition(float deltaX, float deltaY, float deltaZ)
         {
-            Camera.X += deltaX;
-            Camera.Y += deltaY;
-            Camera.Z += deltaZ;
-            ClearImage();
-
-            currViewport = Viewport();
             currView = View();
-            currProjection = Projection();
-
-            Matrix4x4 resultMatrix = 
-                currViewport *
-                currProjection *
-                currView *
-                currModel;
-
-            RecountCoordinates(resultMatrix, _modelCoordinates.Vertices);
-
-            DrawPolygons();
-            return _image;
         }
 
         private void RecountCoordinates(Matrix4x4 matrix, Vector3[] baseVertices)
@@ -114,113 +132,78 @@ namespace _3DViewer.Core
             for (int i = 0; i < baseVertices.Length; i++)
             {
                 Vector4 v4 = Vector4.Transform(baseVertices[i], matrix);
-                //Vector4 v4 = Vector4.Transform(new Vector4(baseVertices[i], 1), matrix);
-                //v4 /= v4.W;
-                _currCoordinates.Vertices[i].X = v4.X;
-                _currCoordinates.Vertices[i].Y = v4.Y;
-                _currCoordinates.Vertices[i].Z = v4.Z;
+                _currCoordinates.Vertices[i].X = v4.X / v4.W;
+                _currCoordinates.Vertices[i].Y = v4.Y / v4.W;
+                _currCoordinates.Vertices[i].Z = v4.Z / v4.W;
             }
-
         }
 
         private Matrix4x4 Model()
         {
             Matrix4x4 resultMatrix = Matrix4x4.Identity;
-            resultMatrix *= Matrix4x4.CreateScale(scale);
+            resultMatrix *= _normalizationMatrix;
+            resultMatrix *= Matrix4x4.CreateRotationX(_rotation.X);
+            resultMatrix *= Matrix4x4.CreateRotationY(_rotation.Y);
+            resultMatrix *= Matrix4x4.CreateRotationZ(_rotation.Z);
             return resultMatrix;
         }
 
-        public byte[,,] Translate(float translationX, float translationY, float translationZ)
-        {
-            ClearImage();
-            var translation = new Vector3(translationX, translationY, translationZ);
-            Matrix4x4 resultMatrix = Matrix4x4.Identity;
-            resultMatrix *= Matrix4x4.CreateTranslation(translation);
-
-            currModel *= resultMatrix;
-
-            RecountCoordinates(resultMatrix, _currCoordinates.Vertices);
-            DrawPolygons();
-            return _image;
-        }
-        public byte[,,] Rotate(
-            float rotationX,
-            float rotationY,
-            float rotationZ
+        public void ReplaceCameraByScreenCoordinates(
+            float x0, 
+            float y0, 
+            float x1, 
+            float y1
             )
         {
-            ClearImage();
-            Matrix4x4 resultMatrix = Matrix4x4.Identity;
-            resultMatrix *= Matrix4x4.CreateRotationX(rotationX);
-            resultMatrix *= Matrix4x4.CreateRotationY(rotationY);
-            resultMatrix *= Matrix4x4.CreateRotationZ(rotationZ);
+            //double dy = _height / 2 / Math.Tan(FOV / 2);
+            //double dx = _width / 2 / Math.Tan(FOV / 2 * _aspect);
 
-            currModel *= resultMatrix;
+            //Vector3 sphereVector = ToSphereVector(_camera);
+            _rotation.Y += (x1 - x0) / 100;//(float)(Math.Atan((_width / 2 - x0) / dx) + Math.Atan((x1 - _width / 2) / dx)) * 5;
+            _rotation.Z += (y1 - y0) / 100;//(floa)(Math.Atan((_height / 2 - y0) / dy) + Math.Atan((y1 - _height / 2) / dy)) * 5;
+            //Quaternion
 
-            RecountCoordinates(resultMatrix, _currCoordinates.Vertices);
-
-            DrawPolygons();
-            return _image;
+            //_camera = ToCameraVector(sphereVector);
+            currModel = Model();
         }
 
-        public byte[,,] Scale(float scale)
+        public void Scale(float scale)
         {
-            ClearImage();
-            this.scale = scale;
-            Matrix4x4 resultMatrix = Matrix4x4.Identity;
-            resultMatrix *= Matrix4x4.CreateScale(scale);
 
-            currModel *= resultMatrix;
-
-            RecountCoordinates(resultMatrix, _currCoordinates.Vertices);
-
-            DrawPolygons();
-            return _image;
         }
 
         private Matrix4x4 View()
         {
-            return Matrix4x4.CreateLookAt(Camera, target, up);
+            Matrix4x4 resultMatrix = Matrix4x4.CreateLookAt(_camera, target, up);
+            return resultMatrix;
         }
         private Matrix4x4 Projection()
         {
-            return new Matrix4x4
-            {
-                M11 = 1 / (aspect * (float)Math.Tan(FOV / 2)),
-                M22 = 1 / (float)Math.Tan(FOV / 2),
-                M33 = zfar / (znear - zfar),
-
-                M43 = -1,
-
-                M34 = znear * zfar / (znear - zfar),
-            };
+            return Matrix4x4.CreatePerspectiveFieldOfView(FOV, _aspect, znear, zfar);
         }
         private Matrix4x4 Viewport()
         {
-           
-            return new Matrix4x4
+            Matrix4x4 matrix = new()
             {
-                M11 = _side / 2f,
-                M22 = -_side / 2f,
+                M11 = _width / 2f,
+                M22 = - _height / 2f,
                 M33 = 1,
                 M44 = 1,
 
-                M14 = xmin + _side / 2f,
-                M24 = ymin + _side / 2f,
+                M41 = _width / 2f,
+                M42 = _height / 2f,
             };
+            return matrix;
         }
 
         private void ClearImage()
         {
-            for (int i = 0; i < _image.GetLength(0); i++)
+            for (int i = 0; i < _image.Length/4; i++)
             {
-                for (int j = 0; j < _image.GetLength(1); j++)
-                {
-                    _image[i, j, 0] = BackgroundColor.Alpha;
-                    _image[i, j, 1] = BackgroundColor.Red;
-                    _image[i, j, 2] = BackgroundColor.Green;
-                    _image[i, j, 3] = BackgroundColor.Blue;
-                }
+                _image[i * 4 + 0] = BackgroundColor.Blue;
+                _image[i * 4 + 1] = BackgroundColor.Green;
+                _image[i * 4 + 2] = BackgroundColor.Red;
+                _image[i * 4 + 3] = BackgroundColor.Alpha;
             }
         }
         private void DrawLine(float x0, float x1, float y0, float y1)
@@ -239,13 +222,14 @@ namespace _3DViewer.Core
 
                 if (X >= 0 &&
                     Y >= 0 &&
-                    X < Width &&
-                    Y < Height)
+                    X < _width &&
+                    Y < _height)
                 {
-                    _image[Y, X, 0] = 255;
-                    _image[Y, X, 1] = 255;
-                    _image[Y, X, 2] = 255;
-                    _image[Y, X, 3] = 255;
+                    int point = Y * _width * ARGB + X * ARGB;
+                    _image[point + 0] = 0;
+                    _image[point + 1] = 0;
+                    _image[point + 2] = 0;
+                    _image[point + 3] = 255;
                 }
             }
         }

@@ -4,17 +4,11 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using _3DViewer;
-using System.Reflection;
-using System.Resources;
-using System.Runtime.Versioning;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace _3DViewer.View
 {
@@ -22,17 +16,17 @@ namespace _3DViewer.View
     {
         private WriteableBitmap _bitmap;
 
-        private ObjVertices _objVertices = new ObjVertices();
+        private ObjVertices _objVertices = new();
         private BitmapGenerator _bitmapGenerator;
         private bool _rotation = false;
         private Point _prevPoint;
 
         private float sensitivity = 0.7f;
 
-        private int w = 2000;
-        private int h = 1000;
+        private int _width = 2000;
+        private int _height = 1000;
 
-        byte[,,] btm;
+        byte[] btm;
 
         static MainVM()
         {
@@ -60,18 +54,20 @@ namespace _3DViewer.View
         public MainVM()
         {
             // длину и ширину по-хорошему нужно получать в рантайме
-            _bitmap = new(w, h, 96, 96, PixelFormats.Bgr32, null);
+            _bitmap = new(_width, _height, 96, 96, PixelFormats.Bgr32, null);
 
-            var cat = Resource.spider;
-            MemoryStream stream = new MemoryStream();
-            stream.Write(cat, 0, cat.Length);
+            var obj = Resource.cat;
+            MemoryStream stream = new();
+            stream.Write(obj, 0, obj.Length);
 
             _objVertices.ParseObj(stream);
-            _bitmapGenerator = new BitmapGenerator(_objVertices, w, h);
+            _bitmapGenerator = new BitmapGenerator(_objVertices, _width, _height);
+
             btm = _bitmapGenerator.GenerateImage();
             Bitmap.Lock();
-            Bitmap.WritePixels(new Int32Rect(0, 0, w, h), btm.Cast<byte>().ToArray(), w * 4, 0);
+            Bitmap.WritePixels(new Int32Rect(0, 0, _width, _height), btm, _width * 4, 0);
             Bitmap.Unlock();
+
             MouseDownCommand = new RelayCommand<Point>((point) => MouseDown(point));
             MouseUpCommand = new RelayCommand(MouseUp);
             MouseMoveCommand = new RelayCommand<Point>((point) => MouseMove(point));
@@ -83,79 +79,80 @@ namespace _3DViewer.View
 
         private void KeyDown(Key key)
         {
-            float rotMin = (float)(Math.PI / 16);
+            float rotMin = (float)(Math.PI / 36);
             float transMin = 125.0f;
-            float cameraDelta = 125.0f;
+            float cameraDelta = 0.5f;
 
             switch (key)
             {
-                case Key.Left:
-                    btm = _bitmapGenerator.Rotate(-rotMin, 0, 0);
-                    break;
-                case Key.Right:
-                    btm = _bitmapGenerator.Rotate(rotMin, 0, 0);
-                    break;
-                case Key.Up:
-                    btm = _bitmapGenerator.Rotate(0, -rotMin, 0);
-                    break;
-                case Key.Down:
-                    btm = _bitmapGenerator.Rotate(0, rotMin, 0);
-                    break;
-                case Key.OemComma:
-                    btm = _bitmapGenerator.Rotate(0, 0, -rotMin);
-                    break;
-                case Key.OemPeriod:
-                    btm = _bitmapGenerator.Rotate(0, 0, rotMin);
-                    break;
+                //case Key.Left:
+                //    _bitmapGenerator.Rotate(-rotMin, 0, 0);
+                //    break;
+                //case Key.Right:
+                //    _bitmapGenerator.Rotate(rotMin, 0, 0);
+                //    break;
+                //case Key.Up:
+                //    _bitmapGenerator.Rotate(0, -rotMin, 0);
+                //    break;
+                //case Key.Down:
+                //    _bitmapGenerator.Rotate(0, rotMin, 0);
+                //    break;
+                //case Key.OemComma:
+                //    _bitmapGenerator.Rotate(0, 0, -rotMin);
+                //    break;
+                //case Key.OemPeriod:
+                //    _bitmapGenerator.Rotate(0, 0, rotMin);
+                //    break;
 
-                case Key.W:
-                    btm = _bitmapGenerator.Translate(0, -transMin, 0);
-                    break;
-                case Key.A:
-                    btm = _bitmapGenerator.Translate(-transMin, 0, 0);
-                    break;
-                case Key.S:
-                    btm = _bitmapGenerator.Translate(0, transMin, 0);
-                    break;
-                case Key.D:
-                    btm = _bitmapGenerator.Translate(transMin, 0, 0);
-                    break;
-                case Key.E:
-                    btm = _bitmapGenerator.Translate(0, 0, -transMin);
-                    break;
-                case Key.Q:
-                    btm = _bitmapGenerator.Translate(0, 0, transMin);
-                    break;
+                //case Key.W:
+                //    _bitmapGenerator.Translate(0, -transMin, 0);
+                //    break;
+                //case Key.A:
+                //    _bitmapGenerator.Translate(-transMin, 0, 0);
+                //    break;
+                //case Key.S:
+                //    _bitmapGenerator.Translate(0, transMin, 0);
+                //    break;
+                //case Key.D:
+                //    _bitmapGenerator.Translate(transMin, 0, 0);
+                //    break;
+                //case Key.E:
+                //    _bitmapGenerator.Translate(0, 0, -transMin);
+                //    break;
+                //case Key.Q:
+                //    _bitmapGenerator.Translate(0, 0, transMin);
+                //    break;
 
                 case Key.OemMinus:
-                    btm = _bitmapGenerator.Scale(sensitivity);
+                    _bitmapGenerator.Scale(sensitivity);
                     break;
                 case Key.OemPlus:
-                    btm = _bitmapGenerator.Scale(1 / sensitivity);
+                    _bitmapGenerator.Scale(-sensitivity);
                     break;
 
                 case Key.NumPad2:
-                    btm = _bitmapGenerator.ChangeCameraPosition(0, 0, -cameraDelta);
+                    _bitmapGenerator.ChangeCameraPosition(0, 0, -cameraDelta);
                     break;
                 case Key.NumPad8:
-                    btm = _bitmapGenerator.ChangeCameraPosition(0, 0, cameraDelta);
+                    _bitmapGenerator.ChangeCameraPosition(0, 0, cameraDelta);
                     break;
                 case Key.NumPad4:
-                    btm = _bitmapGenerator.ChangeCameraPosition(-cameraDelta, 0, 0);
+                    _bitmapGenerator.ChangeCameraPosition(-cameraDelta, 0, 0);
                     break;
                 case Key.NumPad6:
-                    btm = _bitmapGenerator.ChangeCameraPosition(cameraDelta, 0, 0);
+                    _bitmapGenerator.ChangeCameraPosition(cameraDelta, 0, 0);
                     break;
                 case Key.NumPad7:
-                    btm = _bitmapGenerator.ChangeCameraPosition(0, cameraDelta, 0);
+                    _bitmapGenerator.ChangeCameraPosition(0, cameraDelta, 0);
                     break;
                 case Key.NumPad9:
-                    btm = _bitmapGenerator.ChangeCameraPosition(0, -cameraDelta, 0);
+                    _bitmapGenerator.ChangeCameraPosition(0, -cameraDelta, 0);
                     break;
 
             }
+            btm = _bitmapGenerator.GenerateImage();
             Bitmap.Lock();
-            Bitmap.WritePixels(new Int32Rect(0, 0, w, h), btm.Cast<byte>().ToArray(), w * 4, 0);
+            Bitmap.WritePixels(new Int32Rect(0, 0, _width, _height), btm, _width * 4, 0);
             Bitmap.Unlock();
         }
 
@@ -175,7 +172,18 @@ namespace _3DViewer.View
         {
             if (_rotation)
             {
-                
+                _bitmapGenerator.ReplaceCameraByScreenCoordinates(
+                    (float)point.X,
+                    (float)point.Y,
+                    (float)_prevPoint.X,
+                    (float)_prevPoint.Y
+                    );
+                //_bitmapGenerator.ReplaceCameraByScreenCoordinates(0,0,_width, _height);
+                _prevPoint = point;
+                btm = _bitmapGenerator.GenerateImage();
+                Bitmap.Lock();
+                Bitmap.WritePixels(new Int32Rect(0, 0, _width, _height), btm, _width * 4, 0);
+                Bitmap.Unlock();
             }
         }
         private void MouseWheel(int delta)

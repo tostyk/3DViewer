@@ -12,7 +12,7 @@ namespace _3DViewer.Core
         public byte Green;
         public byte Blue;
         public byte Alpha;
-        public Color(byte red, byte green, byte blue, byte alpha)
+        public Color(byte alpha, byte red, byte green, byte blue)
         {
             Red = red;
             Green = green;
