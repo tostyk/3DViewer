@@ -34,5 +34,10 @@ namespace _3DViewer.View
         {
             _mainVM.MouseWheelCommand.Execute(e.Delta);
         }
+
+        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            _mainVM.SizeChangedCommand.Execute(e.NewSize);
+        }
     }
 }

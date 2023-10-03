@@ -1,4 +1,5 @@
 ﻿<Window x:Class="_3DViewer.View.MainWindow"
+        SizeChanged="Window_SizeChanged"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -11,20 +12,24 @@
     <Window.DataContext>
         <vm:MainVM/>
     </Window.DataContext>
-    <Grid>
-        <TextBlock Text="{Binding FrameRate, Mode=OneWay}"
-                   TextAlignment="Right"
-                   VerticalAlignment="Top"
-                   HorizontalAlignment="Right"
-                   Width="100"
-                   Margin="10 0"
-                   Panel.ZIndex="1"/>
-        <Image Source="{Binding Bitmap}"
+
+    <DockPanel LastChildFill="True">
+            <TextBlock Text="{Binding FrameRate, Mode=OneWay}"
+           TextAlignment="Right"
+           VerticalAlignment="Top"
+           HorizontalAlignment="Right"
+           Width="100"
+           Margin="10 0"
+           Panel.ZIndex="1"/>
+            <Image x:Name="imgBtmp"
+            Source="{Binding Bitmap}"
+               Width="{Binding ImgWidth}"
+               Height="{Binding ImgHeight}"
+               
                MouseDown="Image_MouseDown"
                MouseMove="Image_MouseMove"
-               MouseUp="Image_MouseUp"
                MouseWheel="Image_MouseWheel"
-               >
+               MouseUp="Image_MouseUp">
         </Image>
-    </Grid>
+    </DockPanel>
 </Window>

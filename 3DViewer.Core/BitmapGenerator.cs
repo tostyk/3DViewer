@@ -8,8 +8,8 @@ namespace _3DViewer.Core
         public const float ScaleSize = 10;
         private readonly ObjVertices _modelCoordinates;
         private readonly ObjVertices _currCoordinates;
-        private readonly int _width;
-        private readonly int _height;
+        private int _width;
+        private int _height;
         private Vector3 up = new(0, 1, 0);
         private Vector3 target = new(0, 0, 0);
         private Vector3 _camera = new(0, 0, ScaleSize * 5);
@@ -28,7 +28,7 @@ namespace _3DViewer.Core
         private Matrix4x4 currView;
         private Matrix4x4 currModel;
 
-        private readonly byte[] _image;
+        private byte[] _image;
 
         public BitmapGenerator(
             ObjVertices modelCoordinates,
@@ -36,10 +36,6 @@ namespace _3DViewer.Core
             int height
             )
         {
-            _image = new byte[height * width * ARGB];
-            _width = width;
-            _height = height;
-
             _modelCoordinates = modelCoordinates;
             _normalizationMatrix = Normalize();
 
@@ -52,6 +48,29 @@ namespace _3DViewer.Core
                 TextureVertices = _modelCoordinates.TextureVertices,
                 Vertices = new Vector3[_modelCoordinates.Vertices.Length]
             };
+
+
+            /*_image = new byte[height * width * ARGB];
+            _width = width;
+            _height = height;
+            _aspect = _width / _height;
+
+            currViewport = Viewport();
+            currProjection = Projection();
+            currView = View();
+            currModel = Model();*/
+
+            Resized(width, height);
+        }
+
+        public void Resized(
+            int width,
+            int height)
+        {
+            _image = new byte[height * width * ARGB];
+            _width = width;
+            _height = height;
+            _aspect = (float) _width / _height;
 
             currViewport = Viewport();
             currProjection = Projection();
@@ -90,6 +109,8 @@ namespace _3DViewer.Core
                 currView *
                 currProjection *
                 currViewport;
+
+
             RecountCoordinates(resultMatrix, _modelCoordinates.Vertices);
 
             DrawPolygons();
@@ -133,7 +154,7 @@ namespace _3DViewer.Core
 
             Vector3 delta = new(-dx, dy, 0);
 
-            float angle = delta.Length() / 100;
+            float angle = delta.Length()/(ScaleSize * ScaleSize);
 
             Vector3 rotAxis = Vector3.Normalize(
                 Vector3.Cross(
