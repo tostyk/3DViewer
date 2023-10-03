@@ -178,7 +178,6 @@ namespace _3DViewer.View
                     (float)_prevPoint.X,
                     (float)_prevPoint.Y
                     );
-                //_bitmapGenerator.ReplaceCameraByScreenCoordinates(0,0,_width, _height);
                 _prevPoint = point;
                 btm = _bitmapGenerator.GenerateImage();
                 Bitmap.Lock();
@@ -188,7 +187,11 @@ namespace _3DViewer.View
         }
         private void MouseWheel(int delta)
         {
-           
+            _bitmapGenerator.Scale(delta/10);
+            btm = _bitmapGenerator.GenerateImage();
+            Bitmap.Lock();
+            Bitmap.WritePixels(new Int32Rect(0, 0, _width, _height), btm, _width * 4, 0);
+            Bitmap.Unlock();
         }
     }
 }

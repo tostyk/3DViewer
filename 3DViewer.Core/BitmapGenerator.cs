@@ -14,7 +14,6 @@ namespace _3DViewer.Core
         private Vector3 up = new(0, 1, 0);
         private Vector3 target = new(0, 0, 0);
         private Vector3 _camera = new(0, 0, ScaleSize * 5);
-        private Vector3 _rotation;
         private Quaternion _rotationQuaternion = new(0, 0, 0, 1);
 
         private Vector3 ToCameraVector(Vector3 sphereVector)
@@ -145,9 +144,6 @@ namespace _3DViewer.Core
             Matrix4x4 resultMatrix = Matrix4x4.Identity;
             resultMatrix *= _normalizationMatrix;
             resultMatrix *= Matrix4x4.CreateFromQuaternion(_rotationQuaternion);
-            /*resultMatrix *= Matrix4x4.CreateRotationX(_rotation.X);
-            resultMatrix *= Matrix4x4.CreateRotationY(_rotation.Y);
-            resultMatrix *= Matrix4x4.CreateRotationZ(_rotation.Z);*/
             return resultMatrix;
         }
 
@@ -158,14 +154,6 @@ namespace _3DViewer.Core
             float y1
             )
         {
-            //double dy = _height / 2 / Math.Tan(FOV / 2);
-            //double dx = _width / 2 / Math.Tan(FOV / 2 * _aspect);
-
-            //Vector3 sphereVector = ToSphereVector(_camera);
-            _rotation.Y -= (x1 - x0) / 100;//(float)(Math.Atan((_width / 2 - x0) / dx) + Math.Atan((x1 - _width / 2) / dx)) * 5;
-            _rotation.X -= (y1 - y0) / 100;//(floa)(Math.Atan((_height / 2 - y0) / dy) + Math.Atan((y1 - _height / 2) / dy)) * 5;
-            //Quaternion
-
             float dx = (x1 - x0);
             float dy = (y1 - y0);
 
@@ -181,15 +169,16 @@ namespace _3DViewer.Core
 
             _rotationQuaternion = Quaternion.CreateFromAxisAngle(rotAxis, angle) * _rotationQuaternion;
 
-
-            //_camera = ToCameraVector(sphereVector);
             currModel = Model();
-
         }
 
         public void Scale(float scale)
         {
-
+            if(_camera.Z - scale > ScaleSize * Math.Sqrt(3))
+            {
+                _camera.Z -= scale;
+                currView = View();
+            }
         }
 
         private Matrix4x4 View()
