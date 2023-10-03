@@ -43,7 +43,7 @@ namespace _3DViewer.Core
             _modelCoordinates = modelCoordinates;
             _normalizationMatrix = Normalize();
 
-            _aspect = _width / _height;
+            _aspect = (float) _width / _height;
 
             _currCoordinates = new ObjVertices
             {
@@ -232,18 +232,6 @@ namespace _3DViewer.Core
                             );
                 }
             });
-            //foreach (var polygon in _currCoordinates.Polygons)
-            //{
-            //    for (int i = 0; i < polygon.Length; i++)
-            //    {
-            //        DrawLine(
-            //                _currCoordinates.Vertices[polygon[i] - 1].X,
-            //                _currCoordinates.Vertices[polygon[(i + 1) % polygon.Length] - 1].X,
-            //                _currCoordinates.Vertices[polygon[i] - 1].Y,
-            //                _currCoordinates.Vertices[polygon[(i + 1) % polygon.Length] - 1].Y
-            //                );
-            //    }
-            //}
         }
     }
 }

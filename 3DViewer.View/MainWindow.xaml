@@ -5,7 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:_3DViewer.View"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800" KeyDown="Window_KeyDown">
+        Title="MainWindow" 
+        Height="450" 
+        Width="800">
     <Window.DataContext>
         <vm:MainVM/>
     </Window.DataContext>
