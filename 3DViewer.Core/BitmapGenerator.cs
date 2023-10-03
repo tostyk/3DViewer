@@ -1,5 +1,4 @@
 ﻿using System.Numerics;
-using System.Xml;
 
 namespace _3DViewer.Core
 {
@@ -15,31 +14,6 @@ namespace _3DViewer.Core
         private Vector3 target = new(0, 0, 0);
         private Vector3 _camera = new(0, 0, ScaleSize * 5);
         private Quaternion _rotationQuaternion = new(0, 0, 0, 1);
-
-        private Vector3 ToCameraVector(Vector3 sphereVector)
-        {
-            return new Vector3
-            {
-                X = (float)(sphereVector.Z * Math.Sin(sphereVector.Y) * Math.Cos(sphereVector.X)),
-                Y = (float)(sphereVector.Z * Math.Sin(sphereVector.Y) * Math.Sin(sphereVector.X)),
-                Z = (float)(sphereVector.Z * Math.Cos(sphereVector.Y)),
-            };
-        }
-        private Vector3 ToSphereVector(Vector3 cameraVector)
-        {
-            return new Vector3
-            {
-                X = (float)Math.Atan(
-                    cameraVector.X == 0
-                        ? double.PositiveInfinity
-                        : cameraVector.Y / cameraVector.X),
-                Y = (float)Math.Atan(Math.Sqrt(cameraVector.X * cameraVector.X + cameraVector.Y * cameraVector.Y) / cameraVector.Z),
-                Z = (float)Math.Sqrt(
-                    cameraVector.X * cameraVector.X +
-                    cameraVector.Y * cameraVector.Y +
-                    cameraVector.Z * cameraVector.Z),
-            };
-        }
 
         private Matrix4x4 _normalizationMatrix = Matrix4x4.Identity;
         private Color BackgroundColor = new(255, 255, 255, 255);
@@ -159,7 +133,7 @@ namespace _3DViewer.Core
 
             Vector3 delta = new(-dx, dy, 0);
 
-            float angle = delta.Length()/100;
+            float angle = delta.Length() / 100;
 
             Vector3 rotAxis = Vector3.Normalize(
                 Vector3.Cross(
@@ -174,7 +148,7 @@ namespace _3DViewer.Core
 
         public void Scale(float scale)
         {
-            if(_camera.Z - scale > ScaleSize * Math.Sqrt(3))
+            if (_camera.Z - scale > ScaleSize * Math.Sqrt(3))
             {
                 _camera.Z -= scale;
                 currView = View();
@@ -244,18 +218,32 @@ namespace _3DViewer.Core
         }
         private void DrawPolygons()
         {
-            foreach (var polygon in _currCoordinates.Polygons)
+            _currCoordinates.Polygons
+                .AsParallel()
+                .ForAll(polygon =>
             {
                 for (int i = 0; i < polygon.Length; i++)
                 {
                     DrawLine(
-                         _currCoordinates.Vertices[polygon[i] - 1].X,
-                         _currCoordinates.Vertices[polygon[(i + 1) % polygon.Length] - 1].X,
-                         _currCoordinates.Vertices[polygon[i] - 1].Y,
-                         _currCoordinates.Vertices[polygon[(i + 1) % polygon.Length] - 1].Y
-                         );
+                            _currCoordinates.Vertices[polygon[i] - 1].X,
+                            _currCoordinates.Vertices[polygon[(i + 1) % polygon.Length] - 1].X,
+                            _currCoordinates.Vertices[polygon[i] - 1].Y,
+                            _currCoordinates.Vertices[polygon[(i + 1) % polygon.Length] - 1].Y
+                            );
                 }
-            }
+            });
+            //foreach (var polygon in _currCoordinates.Polygons)
+            //{
+            //    for (int i = 0; i < polygon.Length; i++)
+            //    {
+            //        DrawLine(
+            //                _currCoordinates.Vertices[polygon[i] - 1].X,
+            //                _currCoordinates.Vertices[polygon[(i + 1) % polygon.Length] - 1].X,
+            //                _currCoordinates.Vertices[polygon[i] - 1].Y,
+            //                _currCoordinates.Vertices[polygon[(i + 1) % polygon.Length] - 1].Y
+            //                );
+            //    }
+            //}
         }
     }
 }
