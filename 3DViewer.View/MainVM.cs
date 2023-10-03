@@ -98,6 +98,7 @@ namespace _3DViewer.View
 
             _objVertices.ParseObj(stream);
             _bitmapGenerator = new BitmapGenerator(_objVertices, _width, _height);
+            Bitmap = new(_width, _height, 96, 96, PixelFormats.Bgr32, null);
 
             DrawNewFrame();
 

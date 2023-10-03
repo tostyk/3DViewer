@@ -14,22 +14,24 @@
     </Window.DataContext>
 
     <DockPanel LastChildFill="True">
+        <StackPanel Orientation="Vertical">
             <TextBlock Text="{Binding FrameRate, Mode=OneWay}"
-           TextAlignment="Right"
-           VerticalAlignment="Top"
-           HorizontalAlignment="Right"
-           Width="100"
-           Margin="10 0"
-           Panel.ZIndex="1"/>
+                       TextAlignment="Right"
+                       VerticalAlignment="Top"
+                       HorizontalAlignment="Left"
+                       Width="100"
+                       Margin="10 0"
+                       Panel.ZIndex="1"/>
             <Image x:Name="imgBtmp"
-            Source="{Binding Bitmap}"
-               Width="{Binding ImgWidth}"
-               Height="{Binding ImgHeight}"
-               
-               MouseDown="Image_MouseDown"
-               MouseMove="Image_MouseMove"
-               MouseWheel="Image_MouseWheel"
-               MouseUp="Image_MouseUp">
-        </Image>
+                   Source="{Binding Bitmap}"
+                   Width="{Binding ImgWidth}"
+                   Height="{Binding ImgHeight}"
+                   MouseDown="Image_MouseDown"
+                   MouseMove="Image_MouseMove"
+                   MouseWheel="Image_MouseWheel"
+                   MouseUp="Image_MouseUp">
+            </Image>
+
+        </StackPanel>
     </DockPanel>
 </Window>
