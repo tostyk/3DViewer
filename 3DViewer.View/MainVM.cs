@@ -56,7 +56,7 @@ namespace _3DViewer.View
             // длину и ширину по-хорошему нужно получать в рантайме
             _bitmap = new(_width, _height, 96, 96, PixelFormats.Bgr32, null);
 
-            var obj = Resource.cat;
+            var obj = Resource.cat_1;
             MemoryStream stream = new();
             stream.Write(obj, 0, obj.Length);
 

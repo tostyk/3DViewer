@@ -73,9 +73,9 @@ namespace _3DViewer.View {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Byte[].
         /// </summary>
-        public static byte[] cube {
+        public static byte[] cat_1 {
             get {
-                object obj = ResourceManager.GetObject("cube", resourceCulture);
+                object obj = ResourceManager.GetObject("cat_1", resourceCulture);
                 return ((byte[])(obj));
             }
         }
