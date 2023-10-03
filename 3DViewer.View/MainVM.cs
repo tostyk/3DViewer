@@ -30,8 +30,6 @@ namespace _3DViewer.View
         private bool _rotation = false;
         private Point _prevPoint;
 
-        private float sensitivity = 0.7f;
-
         private int _width = 990;
         private int _height = 1000;
 
@@ -119,9 +117,6 @@ namespace _3DViewer.View
             Bitmap = new(_width, _height, 96, 96, PixelFormats.Bgr32, null);
 
             btm = _bitmapGenerator.GenerateImage();
-
-            ImgHeight = size.Height;
-            ImgWidth = size.Width;
 
             Bitmap.Lock();
             Bitmap.WritePixels(new Int32Rect(0, 0, _width, _height), btm, _width * 4, 0);
