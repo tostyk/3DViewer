@@ -13,7 +13,7 @@
     </Window.DataContext>
 
     <DockPanel LastChildFill="True" >
-        <TextBlock Text="{Binding FrameRate, Mode=OneWay}"
+        <TextBlock DockPanel.Dock="Top" Text="{Binding FrameRate, Mode=OneWay}"
                        TextAlignment="Right"
                        VerticalAlignment="Top"
                        HorizontalAlignment="Left"
