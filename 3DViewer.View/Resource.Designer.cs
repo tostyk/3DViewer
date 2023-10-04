@@ -63,6 +63,16 @@ namespace _3DViewer.View {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Byte[].
         /// </summary>
+        public static byte[] beecat {
+            get {
+                object obj = ResourceManager.GetObject("beecat", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Byte[].
+        /// </summary>
         public static byte[] cat {
             get {
                 object obj = ResourceManager.GetObject("cat", resourceCulture);

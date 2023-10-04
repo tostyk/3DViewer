@@ -31,13 +31,14 @@ namespace _3DViewer.View
         private Point _prevPoint;
 
         private int _width = 990;
-        private int _height = 1000;
+        private int _height = 2000;
 
 
         private double _imgWidth;
         private double _imgHeight;
 
         private bool dontTouch = false;
+        private float sensitivity = 0.07f;
 
         byte[] btm;
 
@@ -45,6 +46,7 @@ namespace _3DViewer.View
 
         static MainVM()
         {
+
             CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
             Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
@@ -98,6 +100,7 @@ namespace _3DViewer.View
             _bitmapGenerator = new BitmapGenerator(_objVertices, _width, _height);
             Bitmap = new(_width, _height, 96, 96, PixelFormats.Bgr32, null);
 
+
             DrawNewFrame();
 
             MouseDownCommand = new RelayCommand<Point>((point) => MouseDown(point));
@@ -115,6 +118,8 @@ namespace _3DViewer.View
             _bitmapGenerator.Resized(_width, _height);
 
             Bitmap = new(_width, _height, 96, 96, PixelFormats.Bgr32, null);
+
+
 
             btm = _bitmapGenerator.GenerateImage();
 
@@ -204,7 +209,7 @@ namespace _3DViewer.View
         }
         private void MouseWheel(int delta)
         {
-            _bitmapGenerator.Scale(delta / 20);
+            _bitmapGenerator.Scale((float)1/(delta*sensitivity));
             DrawNewFrame();
         }
         private readonly static Stopwatch _stopwatch = new();
@@ -220,6 +225,7 @@ namespace _3DViewer.View
         }
         private void DrawNewFrame()
         {
+
             _stopwatch.Restart();
             btm = _bitmapGenerator.GenerateImage();
             Bitmap.Lock();

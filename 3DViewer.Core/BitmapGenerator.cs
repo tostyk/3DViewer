@@ -1,5 +1,8 @@
 ﻿using System.Collections.Concurrent;
 using System.Numerics;
+using System.Collections.Concurrent;
+
+//TODO: a
 
 namespace _3DViewer.Core
 {
@@ -37,10 +40,12 @@ namespace _3DViewer.Core
             int height
             )
         {
+            _width = width;
+            _height = height;
+            _aspect = (float) _width / _height;
+
             _modelCoordinates = modelCoordinates;
             _normalizationMatrix = Normalize();
-
-            _aspect = (float) _width / _height;
 
             _currCoordinates = new ObjVertices
             {
@@ -49,17 +54,6 @@ namespace _3DViewer.Core
                 TextureVertices = _modelCoordinates.TextureVertices,
                 Vertices = new Vector3[_modelCoordinates.Vertices.Length]
             };
-
-
-            /*_image = new byte[height * width * ARGB];
-            _width = width;
-            _height = height;
-            _aspect = _width / _height;
-
-            currViewport = Viewport();
-            currProjection = Projection();
-            currView = View();
-            currModel = Model();*/
 
             Resized(width, height);
         }
@@ -73,6 +67,8 @@ namespace _3DViewer.Core
             _height = height;
             _aspect = (float) _width / _height;
 
+            _normalizationMatrix = Normalize();
+
             currViewport = Viewport();
             currProjection = Projection();
             currView = View();
@@ -81,7 +77,6 @@ namespace _3DViewer.Core
 
         private Matrix4x4 Normalize()
         {
-            Matrix4x4 matrix = Matrix4x4.Identity;
             Vector3 max = new(
                 _modelCoordinates.Vertices.Max(v => v.X),
                 _modelCoordinates.Vertices.Max(v => v.Y),
@@ -92,15 +87,18 @@ namespace _3DViewer.Core
                 _modelCoordinates.Vertices.Min(v => v.Y),
                 _modelCoordinates.Vertices.Min(v => v.Z)
                 );
-            Vector3 avg = (min + max) / 2;
-            Vector3 scaleVector = (max - min) / 2;
-            float scale = Math.Max(Math.Max(scaleVector.X, scaleVector.Y), scaleVector.Z);
+            Vector3 avg = (min + max) /2;
+            Vector3 scaleVector = (max - min);
+            float scale = 1/Math.Max(Math.Max(scaleVector.X, scaleVector.Y), scaleVector.Z);
 
-            matrix.Translation = -avg;
-            matrix *= Matrix4x4.CreateScale(1f / scale * 10);
+            Matrix4x4 matrix = Matrix4x4.CreateTranslation(-avg) * Matrix4x4.CreateScale(scale);
+
+            float radius = scale * Vector3.Distance(avg, min);
+            float hFov = 2 * (float)Math.Atan(Math.Tan(FOV / 2) * ((float)_width / _height));
+            _camera.Z = Math.Max(znear + radius, radius / (float)Math.Sin(Math.Min(FOV / 2, hFov / 2)));
+            
             return matrix;
         }
-
         public byte[] GenerateImage()
         {
             ClearImage();
@@ -181,11 +179,8 @@ namespace _3DViewer.Core
 
         public void Scale(float scale)
         {
-            if (_camera.Z - scale > ScaleSize * Math.Sqrt(3))
-            {
-                _camera.Z -= scale;
-                currView = View();
-            }
+            _camera.Z -= scale;
+            currView = View();
         }
 
         private Matrix4x4 View()
