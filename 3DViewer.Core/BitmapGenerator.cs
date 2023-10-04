@@ -25,6 +25,7 @@ namespace _3DViewer.Core
         private float zfar = 100f;
         private float znear = 0.01f;
         private float _aspect;
+        private float _radius;
         public const float FOV = (float)(Math.PI / 4); // 45deg Yaxis, 90deg Xaxis
 
         private Matrix4x4 currViewport;
@@ -93,9 +94,9 @@ namespace _3DViewer.Core
 
             Matrix4x4 matrix = Matrix4x4.CreateTranslation(-avg) * Matrix4x4.CreateScale(scale);
 
-            float radius = scale * Vector3.Distance(avg, min);
+            _radius = scale * Vector3.Distance(avg, min);
             float hFov = 2 * (float)Math.Atan(Math.Tan(FOV / 2) * ((float)_width / _height));
-            _camera.Z = Math.Max(znear + radius, radius / (float)Math.Sin(Math.Min(FOV / 2, hFov / 2)));
+            _camera.Z = Math.Max(znear + _radius, _radius / (float)Math.Sin(Math.Min(FOV / 2, hFov / 2)));
             
             return matrix;
         }
@@ -179,8 +180,11 @@ namespace _3DViewer.Core
 
         public void Scale(float scale)
         {
-            _camera.Z -= scale;
-            currView = View();
+            if (_camera.Z - scale > _radius)
+            {
+                _camera.Z -= scale;
+                currView = View();
+            }
         }
 
         private Matrix4x4 View()

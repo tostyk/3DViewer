@@ -23,8 +23,6 @@
                     Panel.ZIndex="1"/>
         <Image x:Name="imgBtmp"
                    Source="{Binding Bitmap}"
-                   Width="{Binding ImgWidth, Mode=OneWayToSource}"
-                   Height="{Binding ImgHeight, Mode=OneWayToSource}"
                    MouseDown="Image_MouseDown"
                    MouseMove="Image_MouseMove"
                    MouseWheel="Image_MouseWheel"

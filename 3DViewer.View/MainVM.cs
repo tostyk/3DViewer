@@ -1,13 +1,11 @@
 ﻿using _3DViewer.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Diagnostics;
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Input;
@@ -18,11 +16,6 @@ namespace _3DViewer.View
 {
     public class MainVM : ObservableObject, INotifyPropertyChanged
     {
-
-        [DllImport("User32.dll")]
-        private static extern bool SetCursorPos(int X, int Y);
-
-
         private WriteableBitmap _bitmap;
 
         private readonly ObjVertices _objVertices = new();
@@ -30,23 +23,18 @@ namespace _3DViewer.View
         private bool _rotation = false;
         private Point _prevPoint;
 
-        private int _width = 990;
-        private int _height = 2000;
+        private int _width = 2000;
+        private int _height;
 
-
-        private double _imgWidth;
-        private double _imgHeight;
+        //private double _quality = 1.5;
 
         private bool dontTouch = false;
-        private float sensitivity = 0.07f;
+        private float sensitivity = 0.001f;
 
         byte[] btm;
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
         static MainVM()
         {
-
             CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
             Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
@@ -60,26 +48,6 @@ namespace _3DViewer.View
                 OnPropertyChanged();
             }
         }
-        public double ImgWidth
-        {
-            get { return _imgWidth; }
-            set
-            {
-                _imgWidth = value;
-                OnPropertyChanged("ImgWidth");
-            }
-        }
-
-        public double ImgHeight
-        {
-            get { return _imgHeight; }
-            set
-            {
-                _imgHeight = value;
-                OnPropertyChanged("ImgHeight");
-            }
-        }
-
         public ICommand MouseDownCommand { get; }
         public ICommand MouseUpCommand { get; }
         public ICommand MouseMoveCommand { get; }
@@ -90,7 +58,6 @@ namespace _3DViewer.View
 
         public MainVM()
         {
-
             var obj = Resource.cat_1;
 
             MemoryStream stream = new();
@@ -99,7 +66,6 @@ namespace _3DViewer.View
             _objVertices.ParseObj(stream);
             _bitmapGenerator = new BitmapGenerator(_objVertices, _width, _height);
             Bitmap = new(_width, _height, 96, 96, PixelFormats.Bgr32, null);
-
 
             DrawNewFrame();
 
@@ -112,20 +78,13 @@ namespace _3DViewer.View
 
         private void SizeChanged(Size size)
         {
-            double aspectRatio = size.Width / size.Height;
-            _width = Convert.ToInt32(aspectRatio * _height);
+            //_width = Convert.ToInt32(size.Width * _quality);
+            _height = Convert.ToInt32(size.Height / size.Width * _width);// * _quality);
 
             _bitmapGenerator.Resized(_width, _height);
-
             Bitmap = new(_width, _height, 96, 96, PixelFormats.Bgr32, null);
 
-
-
-            btm = _bitmapGenerator.GenerateImage();
-
-            Bitmap.Lock();
-            Bitmap.WritePixels(new Int32Rect(0, 0, _width, _height), btm, _width * 4, 0);
-            Bitmap.Unlock();
+            DrawNewFrame();
         }
 
 
@@ -166,50 +125,9 @@ namespace _3DViewer.View
             }
         }
 
-        private void ReplaceCursor(int x, int y)
-        {
-            
-            // Left boundary
-            int xL = (int)App.Current.MainWindow.Left;
-            // Right boundary
-            int xR = (int)_imgWidth + xL;
-            // Top boundary
-            int yT = (int)App.Current.MainWindow.Top;
-            // Bottom boundary
-            int yB = (int)_imgHeight + yT;
-
-            int prevX = x;
-            int prevY = y;
-
-            x += xL;
-            y += yT;
-
-            if (x < xL)
-            {
-                x = xR;
-            }
-            else if (x > xR)
-            {
-                x = xL;
-            }
-
-            if (y < yT)
-            {
-                y = yB;
-            }
-            else if (y > yB)
-            {
-                y = yT;
-            }
-            if(prevX != x - xL || prevY != y - yT)
-            {
-                dontTouch = true;
-                SetCursorPos(x + xL, y + yT);
-            }
-        }
         private void MouseWheel(int delta)
         {
-            _bitmapGenerator.Scale((float)1/(delta*sensitivity));
+            _bitmapGenerator.Scale(delta*sensitivity);
             DrawNewFrame();
         }
         private readonly static Stopwatch _stopwatch = new();
@@ -225,18 +143,12 @@ namespace _3DViewer.View
         }
         private void DrawNewFrame()
         {
-
             _stopwatch.Restart();
             btm = _bitmapGenerator.GenerateImage();
             Bitmap.Lock();
             Bitmap.WritePixels(new Int32Rect(0, 0, _width, _height), btm, _width * 4, 0);
             Bitmap.Unlock();
             FrameRate = 1000 * 10_000 / _stopwatch.ElapsedTicks;
-        }
-
-        protected void OnPropertyChanged([CallerMemberName] string name = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }
