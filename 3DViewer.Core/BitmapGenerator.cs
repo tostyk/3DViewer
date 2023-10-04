@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Collections.Concurrent;
+using System.Numerics;
 
 namespace _3DViewer.Core
 {
@@ -125,13 +126,16 @@ namespace _3DViewer.Core
 
         private void RecountCoordinates(Matrix4x4 matrix, Vector3[] baseVertices)
         {
-            for (int i = 0; i < baseVertices.Length; i++)
+            Parallel.ForEach(Partitioner.Create(0, baseVertices.Length), range =>
             {
-                Vector4 v4 = Vector4.Transform(baseVertices[i], matrix);
-                _currCoordinates.Vertices[i].X = v4.X / v4.W;
-                _currCoordinates.Vertices[i].Y = v4.Y / v4.W;
-                _currCoordinates.Vertices[i].Z = v4.Z / v4.W;
-            }
+                for (int i = range.Item1; i < range.Item2; i++)
+                {
+                    Vector4 v4 = Vector4.Transform(baseVertices[i], matrix);
+                    _currCoordinates.Vertices[i].X = v4.X / v4.W;
+                    _currCoordinates.Vertices[i].Y = v4.Y / v4.W;
+                    _currCoordinates.Vertices[i].Z = v4.Z / v4.W;
+                }
+            });                
         }
 
         private Matrix4x4 Model()
@@ -149,22 +153,30 @@ namespace _3DViewer.Core
             float y1
             )
         {
-            float dx = (x1 - x0);
-            float dy = (y1 - y0);
+            float dx = (x1 - x0) / _width * 10;
+            float dy = (y1 - y0) / _height * 10;
 
-            Vector3 delta = new(-dx, dy, 0);
+            dy = (float)Math.Clamp(dy, -Math.PI / 2, Math.PI / 2);
 
-            float angle = delta.Length()/(ScaleSize * ScaleSize);
+            Matrix4x4 rotation = Matrix4x4.CreateRotationX(dy);
+            rotation *= Matrix4x4.CreateRotationY(dx);
+            _camera = Vector3.Transform(_camera, rotation);
+            
+            currView = View();
 
-            Vector3 rotAxis = Vector3.Normalize(
-                Vector3.Cross(
-                    new Vector3(_camera.X, _camera.Y, _camera.Z),
-                    delta)
-                );
+            //Vector3 delta = new(-dx, dy, 0);
+            ////dy = (float)Math.Clamp(dy, -Math.PI/2, Math.PI/2);
 
-            _rotationQuaternion = Quaternion.CreateFromAxisAngle(rotAxis, angle) * _rotationQuaternion;
+            //float angle = delta.Length()/(ScaleSize * ScaleSize);
 
-            currModel = Model();
+            //Vector3 rotAxis = Vector3.Normalize(
+            //    Vector3.Cross(
+            //        new Vector3(_camera.X, _camera.Y, _camera.Z),
+            //        delta)
+            //    );
+            //_rotationQuaternion = Quaternion.CreateFromAxisAngle(rotAxis, angle) * _rotationQuaternion;
+
+            //currModel = Model();
         }
 
         public void Scale(float scale)
@@ -239,18 +251,20 @@ namespace _3DViewer.Core
         }
         private void DrawPolygons()
         {
-            _currCoordinates.Polygons
-                .AsParallel()
-                .ForAll(polygon =>
+            Parallel.ForEach(Partitioner.Create(0, _currCoordinates.Polygons.Length), range =>
             {
-                for (int i = 0; i < polygon.Length; i++)
+                for (int j = range.Item1; j < range.Item2; j++)
                 {
-                    DrawLine(
-                            _currCoordinates.Vertices[polygon[i] - 1].X,
-                            _currCoordinates.Vertices[polygon[(i + 1) % polygon.Length] - 1].X,
-                            _currCoordinates.Vertices[polygon[i] - 1].Y,
-                            _currCoordinates.Vertices[polygon[(i + 1) % polygon.Length] - 1].Y
-                            );
+                    int[] p = _currCoordinates.Polygons[j];
+                    for (int i = 0; i < p.Length; i++)
+                    {
+                        DrawLine(
+                                _currCoordinates.Vertices[p[i] - 1].X,
+                                _currCoordinates.Vertices[p[(i + 1) % p.Length] - 1].X,
+                                _currCoordinates.Vertices[p[i] - 1].Y,
+                                _currCoordinates.Vertices[p[(i + 1) % p.Length] - 1].Y
+                                );
+                    }
                 }
             });
         }
