@@ -27,15 +27,9 @@ namespace _3DViewer.View
         private Point _prevPoint;
 
         private int _width = 2000;
-<<<<<<< Updated upstream
-=======
         private int _height = 1000;
         private float sensitivity = 0.08f;
-
->>>>>>> Stashed changes
         byte[] btm;
-        private int _height = 1000;
-        private float sensitivity = 0.08f;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -65,7 +59,7 @@ namespace _3DViewer.View
 
         public MainVM()
         {
-            var obj = Resource.cat_1;
+            var obj = Resource.cat;
 
             MemoryStream stream = new();
             stream.Write(obj, 0, obj.Length);
