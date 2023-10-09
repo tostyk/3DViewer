@@ -1,11 +1,10 @@
 ﻿using System.Numerics;
-using System.Text.RegularExpressions;
 
 namespace _3DViewer.Core
 {
     public class ObjVertices
     {
-        public Vector3[] Vertices = Array.Empty<Vector3>();
+        public Vector4[] Vertices = Array.Empty<Vector4>();
         public Vector3[] TextureVertices = Array.Empty<Vector3>();
         public Vector3[] Normals = Array.Empty<Vector3>();
         public int[][] Polygons = Array.Empty<int[]>();
@@ -13,7 +12,7 @@ namespace _3DViewer.Core
         public void ParseObj(MemoryStream stream)
         {
             List<int[]> polygons = new();
-            List<Vector3> vertices = new();
+            List<Vector4> vertices = new();
             List<Vector3> textureVertices = new();
             List<Vector3> normal = new();
             string[] lines;
@@ -54,7 +53,7 @@ namespace _3DViewer.Core
                     switch (character)
                     {
                         case "v":
-                            vertices.Add(new Vector3(vx[0], vx[1], vx[2]));
+                            vertices.Add(new Vector4(vx[0], vx[1], vx[2], vx.Length > 3 ? vx[3] : 1));
                             break;
                         case "vn":
                             normal.Add(new Vector3(vx[0], vx[1], vx[2]));

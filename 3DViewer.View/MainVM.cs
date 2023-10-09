@@ -6,16 +6,19 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Runtime.InteropServices;
 
 namespace _3DViewer.View
 {
     public class MainVM : ObservableObject, INotifyPropertyChanged
     {
+        private Pbgra32Bitmap _pbgra32;
         private WriteableBitmap _bitmap;
 
         private readonly ObjVertices _objVertices = new();
@@ -24,14 +27,17 @@ namespace _3DViewer.View
         private Point _prevPoint;
 
         private int _width = 2000;
-        private int _height;
+<<<<<<< Updated upstream
+=======
+        private int _height = 1000;
+        private float sensitivity = 0.08f;
 
-        //private double _quality = 1.5;
-
-        private bool dontTouch = false;
-        private float sensitivity = 0.001f;
-
+>>>>>>> Stashed changes
         byte[] btm;
+        private int _height = 1000;
+        private float sensitivity = 0.08f;
+
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         static MainVM()
         {
@@ -39,6 +45,7 @@ namespace _3DViewer.View
             CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
             Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
         }
+
         public WriteableBitmap Bitmap
         {
             get { return _bitmap; }
@@ -65,7 +72,8 @@ namespace _3DViewer.View
 
             _objVertices.ParseObj(stream);
             _bitmapGenerator = new BitmapGenerator(_objVertices, _width, _height);
-            Bitmap = new(_width, _height, 96, 96, PixelFormats.Bgr32, null);
+            Bitmap = new(_width, _height, 96, 96, PixelFormats.Pbgra32, null);
+            _pbgra32 = new Pbgra32Bitmap(Bitmap);
 
             DrawNewFrame();
 
@@ -76,17 +84,20 @@ namespace _3DViewer.View
             SizeChangedCommand = new RelayCommand<Size>((size) => SizeChanged(size));
         }
 
+
         private void SizeChanged(Size size)
         {
-            //_width = Convert.ToInt32(size.Width * _quality);
-            _height = Convert.ToInt32(size.Height / size.Width * _width);// * _quality);
+            _height = Convert.ToInt32(size.Height / size.Width * _width);
 
             _bitmapGenerator.Resized(_width, _height);
-            Bitmap = new(_width, _height, 96, 96, PixelFormats.Bgr32, null);
+
+            Bitmap = new(_width, _height, 96, 96, PixelFormats.Pbgra32, null);
+            _pbgra32 = new Pbgra32Bitmap(Bitmap);
+            Bitmap = _pbgra32.Source;
 
             DrawNewFrame();
         }
-
+        
 
         private void MouseDown(Point point)
         {
@@ -103,9 +114,8 @@ namespace _3DViewer.View
         private void MouseMove(Point point)
         {
             _rotation = Mouse.LeftButton == MouseButtonState.Pressed;
-            if (_rotation && !dontTouch)
+            if (_rotation)
             {
-
                 _bitmapGenerator.ReplaceCameraByScreenCoordinates(
                     (float)point.X,
                     (float)point.Y,
@@ -114,20 +124,12 @@ namespace _3DViewer.View
                     );
                 _prevPoint = point;
                 DrawNewFrame();
-                
-
-               // ReplaceCursor(Convert.ToInt32(point.X), Convert.ToInt32(point.Y));
-
-            }
-            else
-            {
-                dontTouch = false;
             }
         }
 
         private void MouseWheel(int delta)
         {
-            _bitmapGenerator.Scale(delta*sensitivity);
+            _bitmapGenerator.Scale(sensitivity * Math.Sign(delta));
             DrawNewFrame();
         }
         private readonly static Stopwatch _stopwatch = new();
@@ -138,17 +140,58 @@ namespace _3DViewer.View
             set
             {
                 _frameRate = value;
+
+
                 OnPropertyChanged();
             }
         }
+        private long _maxFrameRate = 0;
+        public long MaxFrameRate
+        {
+            get => _maxFrameRate;
+            set
+            {
+                _maxFrameRate = value;
+                OnPropertyChanged();
+            }
+        }
+        private long _avgFrameRate = 0;
+        public long AvgFrameRate
+        {
+            get => _avgFrameRate;
+            set
+            {
+                _avgFrameRate = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private long _sumFps = 0;
+        private long _numFrames = 0;
+
         private void DrawNewFrame()
         {
+            _numFrames++;
+
             _stopwatch.Restart();
-            btm = _bitmapGenerator.GenerateImage();
             Bitmap.Lock();
+            btm = _bitmapGenerator.GenerateImage();
+           // Marshal.Copy(btm, 0, Bitmap.BackBuffer, btm.Length);
+           // Bitmap.AddDirtyRect(new Int32Rect(0, 0, _width, _height));
             Bitmap.WritePixels(new Int32Rect(0, 0, _width, _height), btm, _width * 4, 0);
             Bitmap.Unlock();
+
             FrameRate = 1000 * 10_000 / _stopwatch.ElapsedTicks;
+            if(FrameRate > MaxFrameRate)
+            {
+                MaxFrameRate = FrameRate;
+            }
+            _sumFps += FrameRate;
+            AvgFrameRate = _sumFps / _numFrames;
+        }
+        protected void OnPropertyChanged([CallerMemberName] string? name = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }

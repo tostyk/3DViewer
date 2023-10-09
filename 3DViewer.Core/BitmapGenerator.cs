@@ -1,8 +1,8 @@
 ﻿using System.Collections.Concurrent;
 using System.Numerics;
 using System.Collections.Concurrent;
+using System.Reflection;
 
-//TODO: a
 
 namespace _3DViewer.Core
 {
@@ -14,25 +14,28 @@ namespace _3DViewer.Core
         private readonly ObjVertices _currCoordinates;
         private int _width;
         private int _height;
-        private Vector3 up = new(0, 1, 0);
-        private Vector3 target = new(0, 0, 0);
-        private Vector3 _camera = new(0, 0, ScaleSize * 5);
-        private Quaternion _rotationQuaternion = new(0, 0, 0, 1);
-
+        private Vector3 _up = new(0, 1, 0);
+        private Vector3 _target = new(0, 0, 0);
+        private Vector3 _camera = new(0, 0, 1);
+        private Vector3 _cameraStart = new(0, 0, 1);
         private Matrix4x4 _normalizationMatrix = Matrix4x4.Identity;
         private Color BackgroundColor = new(255, 255, 255, 255);
-
         private float zfar = 100f;
         private float znear = 0.01f;
-        private float _aspect;
         private float _radius;
-        public const float FOV = (float)(Math.PI / 4); // 45deg Yaxis, 90deg Xaxis
-
+        private float minDepth = 0f;
+        private float maxDepth = 1f;
+        private float minX = 0f;
+        private float minY = 0f;
+        public float FOV = (float)(Math.PI / 4); // 45deg Yaxis, 90deg Xaxis
         private Matrix4x4 currViewport;
         private Matrix4x4 currProjection;
         private Matrix4x4 currView;
         private Matrix4x4 currModel;
-
+        private float _cameraSensetivity = 10f;
+        float _pitch = 0f;
+        float _yaw = 0f;
+        float _roll = 0f;
         private byte[] _image;
 
         public BitmapGenerator(
@@ -43,7 +46,6 @@ namespace _3DViewer.Core
         {
             _width = width;
             _height = height;
-            _aspect = (float) _width / _height;
 
             _modelCoordinates = modelCoordinates;
             _normalizationMatrix = Normalize();
@@ -53,7 +55,7 @@ namespace _3DViewer.Core
                 Polygons = _modelCoordinates.Polygons,
                 Normals = _modelCoordinates.Normals,
                 TextureVertices = _modelCoordinates.TextureVertices,
-                Vertices = new Vector3[_modelCoordinates.Vertices.Length]
+                Vertices = new Vector4[_modelCoordinates.Vertices.Length]
             };
 
             Resized(width, height);
@@ -66,14 +68,12 @@ namespace _3DViewer.Core
             _image = new byte[height * width * ARGB];
             _width = width;
             _height = height;
-            _aspect = (float) _width / _height;
-
-            _normalizationMatrix = Normalize();
 
             currViewport = Viewport();
             currProjection = Projection();
             currView = View();
             currModel = Model();
+
         }
 
         private Matrix4x4 Normalize()
@@ -88,30 +88,24 @@ namespace _3DViewer.Core
                 _modelCoordinates.Vertices.Min(v => v.Y),
                 _modelCoordinates.Vertices.Min(v => v.Z)
                 );
-            Vector3 avg = (min + max) /2;
+            Vector3 avg = (min + max) / 2;
             Vector3 scaleVector = (max - min);
-            float scale = 1/Math.Max(Math.Max(scaleVector.X, scaleVector.Y), scaleVector.Z);
+            float scale = 1 / Math.Max(Math.Max(scaleVector.X, scaleVector.Y), scaleVector.Z);
 
             Matrix4x4 matrix = Matrix4x4.CreateTranslation(-avg) * Matrix4x4.CreateScale(scale);
 
             _radius = scale * Vector3.Distance(avg, min);
             float hFov = 2 * (float)Math.Atan(Math.Tan(FOV / 2) * ((float)_width / _height));
+
             _camera.Z = Math.Max(znear + _radius, _radius / (float)Math.Sin(Math.Min(FOV / 2, hFov / 2)));
             
+            _cameraStart = _camera;
             return matrix;
         }
         public byte[] GenerateImage()
         {
             ClearImage();
-
-            Matrix4x4 resultMatrix =
-                currModel *
-                currView *
-                currProjection *
-                currViewport;
-
-
-            RecountCoordinates(resultMatrix, _modelCoordinates.Vertices);
+            RecountCoordinates(_modelCoordinates.Vertices);
 
             DrawPolygons();
 
@@ -123,25 +117,30 @@ namespace _3DViewer.Core
             currView = View();
         }
 
-        private void RecountCoordinates(Matrix4x4 matrix, Vector3[] baseVertices)
+        private void RecountCoordinates(Vector4[] baseVertices)
         {
+            Matrix4x4 modelViewProjectionMatrix =
+                currModel *
+                currView *
+                currProjection;
+
+            Vector4[] windowVertices = new Vector4[baseVertices.Length];
+
             Parallel.ForEach(Partitioner.Create(0, baseVertices.Length), range =>
             {
                 for (int i = range.Item1; i < range.Item2; i++)
                 {
-                    Vector4 v4 = Vector4.Transform(baseVertices[i], matrix);
-                    _currCoordinates.Vertices[i].X = v4.X / v4.W;
-                    _currCoordinates.Vertices[i].Y = v4.Y / v4.W;
-                    _currCoordinates.Vertices[i].Z = v4.Z / v4.W;
+                    _currCoordinates.Vertices[i] = Vector4.Transform(baseVertices[i], modelViewProjectionMatrix);
+                    _currCoordinates.Vertices[i] /= _currCoordinates.Vertices[i].W;
+                    _currCoordinates.Vertices[i] = Vector4.Transform(_currCoordinates.Vertices[i], currViewport);
                 }
-            });                
+            });
         }
 
         private Matrix4x4 Model()
         {
             Matrix4x4 resultMatrix = Matrix4x4.Identity;
             resultMatrix *= _normalizationMatrix;
-            resultMatrix *= Matrix4x4.CreateFromQuaternion(_rotationQuaternion);
             return resultMatrix;
         }
 
@@ -152,49 +151,34 @@ namespace _3DViewer.Core
             float y1
             )
         {
-            float dx = (x1 - x0) / _width * 10;
-            float dy = (y1 - y0) / _height * 10;
+            float dx = (x1 - x0) / _width * _cameraSensetivity;
+            float dy = (y1 - y0) / _height * _cameraSensetivity;
 
-            dy = (float)Math.Clamp(dy, -Math.PI / 2, Math.PI / 2);
+            _pitch += dy;
+            _yaw += dx;
 
-            Matrix4x4 rotation = Matrix4x4.CreateRotationX(dy);
-            rotation *= Matrix4x4.CreateRotationY(dx);
-            _camera = Vector3.Transform(_camera, rotation);
-            
+            _pitch = (float)Math.Clamp(_pitch, -Math.PI / 2 + 0.1f, Math.PI / 2 - 0.1f); ;
+
+            Matrix4x4 rotation = Matrix4x4.CreateFromYawPitchRoll(_yaw, _pitch, _roll);
+            _camera = Vector3.Transform(_cameraStart, rotation);
+
             currView = View();
-
-            //Vector3 delta = new(-dx, dy, 0);
-            ////dy = (float)Math.Clamp(dy, -Math.PI/2, Math.PI/2);
-
-            //float angle = delta.Length()/(ScaleSize * ScaleSize);
-
-            //Vector3 rotAxis = Vector3.Normalize(
-            //    Vector3.Cross(
-            //        new Vector3(_camera.X, _camera.Y, _camera.Z),
-            //        delta)
-            //    );
-            //_rotationQuaternion = Quaternion.CreateFromAxisAngle(rotAxis, angle) * _rotationQuaternion;
-
-            //currModel = Model();
         }
 
         public void Scale(float scale)
         {
-            if (_camera.Z - scale > _radius)
-            {
-                _camera.Z -= scale;
-                currView = View();
-            }
+            FOV = (float)Math.Clamp(FOV - scale, 0.1f, Math.PI / 2);
+            currProjection = Projection();
         }
 
         private Matrix4x4 View()
         {
-            Matrix4x4 resultMatrix = Matrix4x4.CreateLookAt(_camera, target, up);
+            Matrix4x4 resultMatrix = Matrix4x4.CreateLookAt(_camera, _target, _up);
             return resultMatrix;
         }
         private Matrix4x4 Projection()
         {
-            return Matrix4x4.CreatePerspectiveFieldOfView(FOV, _aspect, znear, zfar);
+            return Matrix4x4.CreatePerspectiveFieldOfView(FOV, (float)_width/_height, znear, zfar);
         }
         private Matrix4x4 Viewport()
         {
@@ -202,24 +186,28 @@ namespace _3DViewer.Core
             {
                 M11 = _width / 2f,
                 M22 = -_height / 2f,
-                M33 = 1,
+                M33 = maxDepth - minDepth,
                 M44 = 1,
 
-                M41 = _width / 2f,
-                M42 = _height / 2f,
+                M41 = minX + _width / 2f,
+                M42 = minY + _height / 2f,
+                M43 = _height / 2f,
             };
             return matrix;
         }
 
         private void ClearImage()
         {
-            for (int i = 0; i < _image.Length / 4; i++)
+            Parallel.ForEach(Partitioner.Create(0, _image.Length / 4), range =>
             {
-                _image[i * 4 + 0] = BackgroundColor.Blue;
-                _image[i * 4 + 1] = BackgroundColor.Green;
-                _image[i * 4 + 2] = BackgroundColor.Red;
-                _image[i * 4 + 3] = BackgroundColor.Alpha;
-            }
+                for (int i = range.Item1; i < range.Item2; i++)
+                {
+                    _image[i * 4 + 0] = BackgroundColor.Blue;
+                    _image[i * 4 + 1] = BackgroundColor.Green;
+                    _image[i * 4 + 2] = BackgroundColor.Red;
+                    _image[i * 4 + 3] = BackgroundColor.Alpha;
+                }
+            });
         }
         private void DrawLine(float x0, float x1, float y0, float y1)
         {
@@ -229,6 +217,7 @@ namespace _3DViewer.Core
 
             float dx = (x1 - x0) / L;
             float dy = (y1 - y0) / L;
+
 
             for (int i = 0; i < L; i++)
             {

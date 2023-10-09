@@ -13,14 +13,27 @@
     </Window.DataContext>
 
     <DockPanel LastChildFill="True" >
-        <TextBlock DockPanel.Dock="Top" 
-                    Text="{Binding FrameRate, Mode=OneWay}"
-                    TextAlignment="Right"
-                    VerticalAlignment="Top"
-                    HorizontalAlignment="Left"
-                    Width="20"
-                    Margin="10 0"
-                    Panel.ZIndex="1"/>
+        <TextBlock DockPanel.Dock="Top" Text="{Binding FrameRate, Mode=OneWay}"
+                       TextAlignment="Right"
+                       VerticalAlignment="Top"
+                       HorizontalAlignment="Left"
+                       Width="100"
+                       Margin="10 0"
+                       Panel.ZIndex="1"/>
+        <TextBlock DockPanel.Dock="Top" Text="{Binding AvgFrameRate, Mode=OneWay}"
+                       TextAlignment="Right"
+                       VerticalAlignment="Top"
+                       HorizontalAlignment="Left"
+                       Width="100"
+                       Margin="10 0"
+                       Panel.ZIndex="1"/>
+        <TextBlock DockPanel.Dock="Top" Text="{Binding MaxFrameRate, Mode=OneWay}"
+                       TextAlignment="Right"
+                       VerticalAlignment="Top"
+                       HorizontalAlignment="Left"
+                       Width="100"
+                       Margin="10 0"
+                       Panel.ZIndex="1"/>
         <Image x:Name="imgBtmp"
                    Source="{Binding Bitmap}"
                    MouseDown="Image_MouseDown"
