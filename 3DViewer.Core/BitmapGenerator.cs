@@ -1,42 +1,48 @@
-﻿using System.Collections.Concurrent;
-using System.Numerics;
+﻿using System;
 using System.Collections.Concurrent;
-using System.Reflection;
+using System.Numerics;
 
 
 namespace _3DViewer.Core
 {
-    public class BitmapGenerator
+    public unsafe class BitmapGenerator
     {
         public const int ARGB = 4;
-        public const float ScaleSize = 10;
+
         private readonly ObjVertices _modelCoordinates;
-        private readonly ObjVertices _currCoordinates;
+        private Vector4[] _windowCoordinates;
+        private Vector4[] _worldCoordinates;
+
+
+        private Vector3[] _worldNormals;
+
         private int _width;
         private int _height;
-        private Vector3 _up = new(0, 1, 0);
-        private Vector3 _target = new(0, 0, 0);
-        private Vector3 _camera = new(0, 0, 1);
-        private Vector3 _cameraStart = new(0, 0, 1);
-        private Matrix4x4 _normalizationMatrix = Matrix4x4.Identity;
-        private Color BackgroundColor = new(255, 255, 255, 255);
-        private float zfar = 100f;
-        private float znear = 0.01f;
-        private float _radius;
+
         private float minDepth = 0f;
         private float maxDepth = 1f;
         private float minX = 0f;
         private float minY = 0f;
-        public float FOV = (float)(Math.PI / 4); // 45deg Yaxis, 90deg Xaxis
+
+        private Camera _camera;
+        private Matrix4x4 _normalizationMatrix = Matrix4x4.Identity;
         private Matrix4x4 currViewport;
         private Matrix4x4 currProjection;
         private Matrix4x4 currView;
         private Matrix4x4 currModel;
-        private float _cameraSensetivity = 10f;
-        float _pitch = 0f;
-        float _yaw = 0f;
-        float _roll = 0f;
+
         private byte[] _image;
+        private double[] _zbuffer;
+
+        private float _intensivityCoef = 0.7f;
+
+        private Color BackgroundColor = new(255, 11, 14, 89);
+        private Color DiffuseColor = new(255, 85, 10, 10);
+        private Color SpecularColor = new(255, 255, 255, 255);
+
+        private Vector3 _lightPosition;
+
+        private LightningCounter _lightningCounter;
 
         public BitmapGenerator(
             ObjVertices modelCoordinates,
@@ -44,19 +50,23 @@ namespace _3DViewer.Core
             int height
             )
         {
+            _lightningCounter = new LightningCounter(
+                BackgroundColor,
+                DiffuseColor,
+                SpecularColor
+                );
+            _camera = new Camera();
+            _lightPosition = _camera.Position;
             _width = width;
             _height = height;
 
             _modelCoordinates = modelCoordinates;
+            _modelCoordinates.SeparateTriangles();
+
             _normalizationMatrix = Normalize();
 
-            _currCoordinates = new ObjVertices
-            {
-                Polygons = _modelCoordinates.Polygons,
-                Normals = _modelCoordinates.Normals,
-                TextureVertices = _modelCoordinates.TextureVertices,
-                Vertices = new Vector4[_modelCoordinates.Vertices.Length]
-            };
+            _windowCoordinates = new Vector4[_modelCoordinates.Vertices.Length];
+            _worldCoordinates = new Vector4[_modelCoordinates.Vertices.Length];
 
             Resized(width, height);
         }
@@ -66,6 +76,8 @@ namespace _3DViewer.Core
             int height)
         {
             _image = new byte[height * width * ARGB];
+            _zbuffer = new double[height * width * ARGB];
+
             _width = width;
             _height = height;
 
@@ -73,7 +85,6 @@ namespace _3DViewer.Core
             currProjection = Projection();
             currView = View();
             currModel = Model();
-
         }
 
         private Matrix4x4 Normalize()
@@ -93,22 +104,16 @@ namespace _3DViewer.Core
             float scale = 1 / Math.Max(Math.Max(scaleVector.X, scaleVector.Y), scaleVector.Z);
 
             Matrix4x4 matrix = Matrix4x4.CreateTranslation(-avg) * Matrix4x4.CreateScale(scale);
-
-            _radius = scale * Vector3.Distance(avg, min);
-            float hFov = 2 * (float)Math.Atan(Math.Tan(FOV / 2) * ((float)_width / _height));
-
-            _camera.Z = Math.Max(znear + _radius, _radius / (float)Math.Sin(Math.Min(FOV / 2, hFov / 2)));
-            
-            _cameraStart = _camera;
+            float radius = scale * Vector3.Distance(avg, min);
+            _camera.Normalize(radius, (float)_width / _height);
             return matrix;
         }
         public byte[] GenerateImage()
         {
             ClearImage();
-            RecountCoordinates(_modelCoordinates.Vertices);
+            RecountCoordinates();
 
-            DrawPolygons();
-
+            TriangleRasterization();
             return _image;
         }
 
@@ -117,22 +122,22 @@ namespace _3DViewer.Core
             currView = View();
         }
 
-        private void RecountCoordinates(Vector4[] baseVertices)
+        private void RecountCoordinates()
         {
             Matrix4x4 modelViewProjectionMatrix =
                 currModel *
                 currView *
                 currProjection;
 
-            Vector4[] windowVertices = new Vector4[baseVertices.Length];
-
-            Parallel.ForEach(Partitioner.Create(0, baseVertices.Length), range =>
+            Parallel.ForEach(Partitioner.Create(0, _modelCoordinates.Vertices.Length), range =>
             {
                 for (int i = range.Item1; i < range.Item2; i++)
                 {
-                    _currCoordinates.Vertices[i] = Vector4.Transform(baseVertices[i], modelViewProjectionMatrix);
-                    _currCoordinates.Vertices[i] /= _currCoordinates.Vertices[i].W;
-                    _currCoordinates.Vertices[i] = Vector4.Transform(_currCoordinates.Vertices[i], currViewport);
+                    _windowCoordinates[i] = Vector4.Transform(_modelCoordinates.Vertices[i], modelViewProjectionMatrix);
+                    _worldCoordinates[i] = Vector4.Transform(_modelCoordinates.Vertices[i], currModel);
+
+                    _windowCoordinates[i] /= _windowCoordinates[i].W;
+                    _windowCoordinates[i] = Vector4.Transform(_windowCoordinates[i], currViewport);
                 }
             });
         }
@@ -151,34 +156,27 @@ namespace _3DViewer.Core
             float y1
             )
         {
-            float dx = (x1 - x0) / _width * _cameraSensetivity;
-            float dy = (y1 - y0) / _height * _cameraSensetivity;
-
-            _pitch += dy;
-            _yaw += dx;
-
-            _pitch = (float)Math.Clamp(_pitch, -Math.PI / 2 + 0.1f, Math.PI / 2 - 0.1f); ;
-
-            Matrix4x4 rotation = Matrix4x4.CreateFromYawPitchRoll(_yaw, _pitch, _roll);
-            _camera = Vector3.Transform(_cameraStart, rotation);
-
+            float dx = (x1 - x0) / _width;
+            float dy = (y1 - y0) / _height;
+            _camera.ReplaceCameraByScreenCoordinates(dx, dy);
             currView = View();
         }
 
         public void Scale(float scale)
         {
-            FOV = (float)Math.Clamp(FOV - scale, 0.1f, Math.PI / 2);
+            _camera.FOV = (float)Math.Clamp(_camera.FOV - scale, 0.1f, Math.PI / 2);
+
             currProjection = Projection();
         }
 
         private Matrix4x4 View()
         {
-            Matrix4x4 resultMatrix = Matrix4x4.CreateLookAt(_camera, _target, _up);
+            Matrix4x4 resultMatrix = Matrix4x4.CreateLookAt(_camera.Position, _camera.Target, _camera.Up);
             return resultMatrix;
         }
         private Matrix4x4 Projection()
         {
-            return Matrix4x4.CreatePerspectiveFieldOfView(FOV, (float)_width/_height, znear, zfar);
+            return Matrix4x4.CreatePerspectiveFieldOfView(_camera.FOV, (float)_width / _height, _camera.ZNear, _camera.ZFar);
         }
         private Matrix4x4 Viewport()
         {
@@ -206,11 +204,17 @@ namespace _3DViewer.Core
                     _image[i * 4 + 1] = BackgroundColor.Green;
                     _image[i * 4 + 2] = BackgroundColor.Red;
                     _image[i * 4 + 3] = BackgroundColor.Alpha;
+                    _zbuffer[i] = double.PositiveInfinity;
                 }
             });
         }
-        private void DrawLine(float x0, float x1, float y0, float y1)
+        private void DrawLine(Vector3 v0, Vector3 v1, Color color)
         {
+            float x0 = v0.X;
+            float x1 = v1.X;
+            float y0 = v0.Y;
+            float y1 = v1.Y;
+
             int xDiff = Math.Abs((int)(x1 - x0));
             int yDiff = Math.Abs((int)(y1 - y0));
             int L = xDiff > yDiff ? xDiff : yDiff;
@@ -218,43 +222,284 @@ namespace _3DViewer.Core
             float dx = (x1 - x0) / L;
             float dy = (y1 - y0) / L;
 
+            int X1 = Convert.ToInt32(x0);
+            int Y1 = Convert.ToInt32(y0);
+            if (L == 0 && X1 > 0 &&
+                    Y1 > 0 &&
+                    X1 < _width &&
+                    Y1 < _height)
+            {
+
+                int point = ARGB * (Y1 * _width + X1);
+
+                _image[point + 0] = color.Blue;
+                _image[point + 1] = color.Green;
+                _image[point + 2] = color.Red;
+                _image[point + 3] = color.Alpha;
+            }
 
             for (int i = 0; i < L; i++)
             {
                 int X = Convert.ToInt32(x0 + dx * i);
                 int Y = Convert.ToInt32(y0 + dy * i);
 
-                if (X >= 0 &&
-                    Y >= 0 &&
+                if (X > 0 &&
+                    Y > 0 &&
                     X < _width &&
                     Y < _height)
                 {
-                    int point = Y * _width * ARGB + X * ARGB;
-                    _image[point + 0] = 0;
-                    _image[point + 1] = 0;
-                    _image[point + 2] = 0;
-                    _image[point + 3] = 255;
+                    int point = ARGB * (Y * _width + X);
+
+                    _image[point + 0] = color.Blue;
+                    _image[point + 1] = color.Green;
+                    _image[point + 2] = color.Red;
+                    _image[point + 3] = color.Alpha;
                 }
             }
         }
-        private void DrawPolygons()
+        private void Swap(ref Vector3 v1, ref Vector3 v2)
         {
-            Parallel.ForEach(Partitioner.Create(0, _currCoordinates.Polygons.Length), range =>
+            var temp = v2;
+            v2 = v1;
+            v1 = temp;
+        }
+
+        private void TriangleToCoordinates(Vector4[] triangle, int[] t, ref Vector3[] triangleCoords)
+        {
+            triangleCoords[0] = new Vector3
+            {
+                X = triangle[t[0]].X,
+                Y = triangle[t[0]].Y,
+                Z = triangle[t[0]].Z
+            };
+            triangleCoords[1] = new Vector3
+            {
+                X = triangle[t[1]].X,
+                Y = triangle[t[1]].Y,
+                Z = triangle[t[1]].Z
+
+            };
+            triangleCoords[2] = new Vector3
+            {
+                X = triangle[t[2]].X,
+                Y = triangle[t[2]].Y,
+                Z = triangle[t[2]].Z,
+            };
+        }
+
+        private void DrawTriangle(int[] vertices, Vector3[] triangleVertices, Vector3[] intensTriangleVertices, Vector3 lightPos)
+        {
+            //don't remove poor lambert
+            //notice that in reality it works almost well only when lightPos = _camera.Position
+            /*    
+                float intensivity = LightningCounter.Lambert(intensTriangleVertices, lightPos);
+                if (intensivity < 0)
+                {
+                    return;
+                }
+                byte currAlpha = (byte)(255 - intensivity * _intensivityCoef * 255);
+
+             */
+
+            byte currRed = 0;
+            byte currGreen = 0;
+            byte currBlue = 0;
+            byte currAlpha = 255;
+
+            Vector3 colorCount = new Vector3(1, 1, 1);
+
+            var ambient = _lightningCounter.CountAmbient();
+
+            if (triangleVertices[0].Y > triangleVertices[1].Y)
+                Swap(ref triangleVertices[0], ref triangleVertices[1]);
+            if (triangleVertices[0].Y > triangleVertices[2].Y)
+                Swap(ref triangleVertices[0], ref triangleVertices[2]);
+            if (triangleVertices[1].Y > triangleVertices[2].Y)
+                Swap(ref triangleVertices[1], ref triangleVertices[2]);
+
+            float totalHeight = (triangleVertices[2].Y - triangleVertices[0].Y + 1);
+
+            //here starts the suffering
+            //    float totalHeightIntense = (intensTriangleVertices[2].Y - intensTriangleVertices[0].Y + 1);
+            //
+
+            for (float i = triangleVertices[0].Y; i <= totalHeight + triangleVertices[0].Y; i++)
+            {
+                bool second_half = i > triangleVertices[1].Y
+                                    || triangleVertices[1].Y == triangleVertices[0].Y;
+
+
+                Vector3 finish_vertice = second_half ?
+                triangleVertices[2] : triangleVertices[1];
+                Vector3 start_vertice = second_half ?
+                triangleVertices[1] : triangleVertices[0];
+
+                float segment_height = (finish_vertice.Y - start_vertice.Y + 1);
+
+                Vector3 A = triangleVertices[0] + (triangleVertices[2] - triangleVertices[0]) * (i - triangleVertices[0].Y) / totalHeight;
+                Vector3 B = start_vertice + (finish_vertice - start_vertice) * (i - start_vertice.Y) / segment_height;
+
+                /* 
+                 
+                bool second_half_intence = i > intensTriangleVertices[1].Y
+                                    || intensTriangleVertices[1].Y == intensTriangleVertices[0].Y;
+
+                Vector3 finish_vertice_intense = second_half_intence ?
+                intensTriangleVertices[2] : intensTriangleVertices[1];
+                Vector3 start_vertice_intense = second_half_intence ?
+                intensTriangleVertices[1] : intensTriangleVertices[0];
+
+                  int finish_vertice_intense_n = second_half ?
+                  2 : 1;
+                  int start_vertice_intense_n = second_half ?
+                  1 : 0;
+                
+                  
+                float segment_height_intense = (finish_vertice_intense.Y - start_vertice_intense.Y + 1);  
+                  
+                Vector3 AIntense = intensTriangleVertices[0] + (intensTriangleVertices[2] - intensTriangleVertices[0]) * (i - intensTriangleVertices[0].Y) / totalHeightIntense;
+                Vector3 BIntense = start_vertice_intense + (finish_vertice_intense - start_vertice_intense) * (i - start_vertice_intense.Y) / segment_height_intense;
+
+
+                var u = Vector3.Distance(triangleVertices[0], A)
+                    / Vector3.Distance(triangleVertices[2], triangleVertices[0]);
+
+                var w = Vector3.Distance(start_vertice_intense, BIntense)
+                    / Vector3.Distance(finish_vertice, start_vertice);
+
+
+                var normal1 = u * _worldNormals[vertices[0]] + (1 - u) * _worldNormals[vertices[2]];
+                var normal2 = w * _worldNormals[vertices[start_vertice_intense_n]]
+                    + (1 - w) * _worldNormals[vertices[finish_vertice_intense_n]];
+
+                normal1 = Vector3.Normalize(normal1);
+                normal2 = Vector3.Normalize(normal2);*/
+
+                var normal = Vector3.Normalize(
+                    Vector3.Cross(
+                    intensTriangleVertices[2] - intensTriangleVertices[0],
+                    intensTriangleVertices[1] - intensTriangleVertices[0]
+                    ));
+
+                if (A.X > B.X)
+                {
+                    Swap(ref A, ref B);
+                }
+
+                for (float x = (A.X); x <= (B.X); x++)
+                {
+                    if (Convert.ToInt32(x) < _width && Convert.ToInt32(i) < _height && Convert.ToInt32(x) >= 0 && Convert.ToInt32(i) >= 0)
+                    {
+                        int ind = Convert.ToInt32(i) * _width + Convert.ToInt32(x);
+
+                        Vector3 p = A + (B - A) * (x - A.X) / (B.X - A.X);
+                        /* 
+                        Vector3 pInt = AIntense + (BIntense - AIntense) * (x - A.X) / (BIntense.X - AIntense.X);
+                        
+                        var t = Vector3.Distance(p, B)/ Vector3.Distance(A, B);
+                        normal = t * normal2 +  (1 - t) * normal1;
+                        */
+
+                        normal = Vector3.Normalize(normal);
+
+                        if (_zbuffer[ind] > p.Z)
+                        {
+                            _zbuffer[ind] = p.Z;
+                            int point = ARGB * ind;
+
+                            var diffuse = _lightningCounter.CountDiffuse(
+                               normal,
+                                -lightPos);
+
+                            var specular = _lightningCounter.CountSpecular(
+                                normal,
+                                 -lightPos,
+                                _camera.Position
+                                );
+
+                            colorCount = 255 * (Vector3.Normalize(ambient + diffuse + specular));
+
+                            currRed = (byte)colorCount.X;
+                            currGreen = (byte)colorCount.Y;
+                            currBlue = (byte)colorCount.Z;
+
+                            Color color = new Color(currAlpha, currRed, currGreen, currBlue);
+
+                            _image[point + 0] = color.Blue;
+                            _image[point + 1] = color.Green;
+                            _image[point + 2] = color.Red;
+                            _image[point + 3] = color.Alpha;
+
+                        }
+                    }
+                }
+            }
+
+        }
+
+        private void VerticesNormals()
+        {
+            _worldNormals = new Vector3[_worldCoordinates.Length];
+            Parallel.ForEach(Partitioner.Create(0, _worldCoordinates.Length), range =>
             {
                 for (int j = range.Item1; j < range.Item2; j++)
                 {
-                    int[] p = _currCoordinates.Polygons[j];
-                    for (int i = 0; i < p.Length; i++)
+                    Vector3 sumNormals = new Vector3();
+                    for (int i = 0; i < _modelCoordinates.VertexTriangles[j].Count; i++)
                     {
-                        DrawLine(
-                                _currCoordinates.Vertices[p[i] - 1].X,
-                                _currCoordinates.Vertices[p[(i + 1) % p.Length] - 1].X,
-                                _currCoordinates.Vertices[p[i] - 1].Y,
-                                _currCoordinates.Vertices[p[(i + 1) % p.Length] - 1].Y
-                                );
+                        var currTriangle = _modelCoordinates.Triangles[i];
+
+                        Vector3[] triangleVertices = new Vector3[currTriangle.Length];
+
+                        TriangleToCoordinates(_worldCoordinates, currTriangle, ref triangleVertices);
+
+                        if (triangleVertices[0].Y > triangleVertices[1].Y)
+                            Swap(ref triangleVertices[0], ref triangleVertices[1]);
+                        if (triangleVertices[0].Y > triangleVertices[2].Y)
+                            Swap(ref triangleVertices[0], ref triangleVertices[2]);
+                        if (triangleVertices[1].Y > triangleVertices[2].Y)
+                            Swap(ref triangleVertices[1], ref triangleVertices[2]);
+
+
+                        var normal = Vector3.Normalize(
+                             Vector3.Cross(
+                                 triangleVertices[2] - triangleVertices[0],
+                                 triangleVertices[1] - triangleVertices[0])
+                             );
+
+                        sumNormals += normal;
+
                     }
+
+                    _worldNormals[j] = Vector3.Normalize(sumNormals / _modelCoordinates.VertexTriangles[j].Count);
                 }
             });
+
         }
+
+        private void TriangleRasterization()
+        {
+            VerticesNormals();
+            Parallel.ForEach(Partitioner.Create(0, _modelCoordinates.Triangles.Length), (Action<Tuple<int, int>>)(range =>
+            {
+                for (int j = range.Item1; j < range.Item2; j++)
+                {
+                    int[] triangleVertices = _modelCoordinates.Triangles[j];
+                    Vector3[] triangleCoordinates = new Vector3[triangleVertices.Length];
+                    Vector3[] intensTriangleVertices = new Vector3[triangleVertices.Length];
+
+                    TriangleToCoordinates(_windowCoordinates, triangleVertices, ref triangleCoordinates);
+                    TriangleToCoordinates(_worldCoordinates, triangleVertices, ref intensTriangleVertices);
+
+                    if (triangleCoordinates[0].Y == triangleCoordinates[1].Y
+                    && triangleCoordinates[0].Y == triangleCoordinates[2].Y) return;
+
+                    _lightPosition = new Vector3(-0.3f, 0.5f, 1);
+                    DrawTriangle(triangleVertices, triangleCoordinates, intensTriangleVertices, _lightPosition);
+
+                }
+            }));
+        }
+
     }
 }

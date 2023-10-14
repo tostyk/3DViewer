@@ -8,6 +8,10 @@ namespace _3DViewer.Core
         public Vector3[] TextureVertices = Array.Empty<Vector3>();
         public Vector3[] Normals = Array.Empty<Vector3>();
         public int[][] Polygons = Array.Empty<int[]>();
+        public int[][] Triangles = Array.Empty<int[]>();
+
+        //to count normal
+        public List<int>[] VertexTriangles = Array.Empty<List<int>>(); 
 
         public void ParseObj(MemoryStream stream)
         {
@@ -15,6 +19,9 @@ namespace _3DViewer.Core
             List<Vector4> vertices = new();
             List<Vector3> textureVertices = new();
             List<Vector3> normal = new();
+
+            List<List<int>> vTrianglses= new();
+
             string[] lines;
 
             using (StreamReader reader = new StreamReader(stream))
@@ -40,7 +47,7 @@ namespace _3DViewer.Core
                     {
                         if (element == "") continue;
                         IEnumerable<string> v1 = element.Split('/');
-                        polygon.Add(int.Parse(v1.First()));
+                        polygon.Add(int.Parse(v1.First()) - 1);
                     }
                     polygons.Add(polygon.ToArray());
                 }
@@ -54,7 +61,7 @@ namespace _3DViewer.Core
                     {
                         case "v":
                             vertices.Add(new Vector4(vx[0], vx[1], vx[2], vx.Length > 3 ? vx[3] : 1));
-                            break;
+                           break;
                         case "vn":
                             normal.Add(new Vector3(vx[0], vx[1], vx[2]));
                             break;
@@ -69,6 +76,47 @@ namespace _3DViewer.Core
             TextureVertices = textureVertices.ToArray();
             Normals = normal.ToArray();
             Polygons = polygons.ToArray();
+        }
+        public void SeparateTriangles()
+        {
+            List<int[]> triangles = new List<int[]>();
+
+            VertexTriangles = new List<int>[Vertices.Length];
+
+            foreach (var polygon in Polygons)
+            {
+                for (int first = 0; (first + 1) < polygon.GetLength(0); first+=2)
+                {
+                    int[] triangle = new int[3];
+
+                    triangle[0] = polygon[first]; 
+                    triangle[1] = polygon[first + 1];
+                    triangle[2] = polygon[(first + 2)%polygon.GetLength(0)];
+                    triangles.Add(triangle);
+                }
+            }
+
+            Triangles = triangles.ToArray();
+
+            for(int i = 0; i < Triangles.Length; i++)
+            {
+                if (VertexTriangles[Triangles[i][0]] == null)
+                {
+                    VertexTriangles[Triangles[i][0]] = new();
+                }
+                if (VertexTriangles[Triangles[i][1]] == null)
+                {
+                    VertexTriangles[Triangles[i][1]] = new();
+                }
+                if (VertexTriangles[Triangles[i][2]] == null)
+                {
+                    VertexTriangles[Triangles[i][2]] = new();
+                }
+
+                VertexTriangles[Triangles[i][0]].Add(i);
+                VertexTriangles[Triangles[i][1]].Add(i);
+                VertexTriangles[Triangles[i][2]].Add(i);
+            }
         }
     }
 }

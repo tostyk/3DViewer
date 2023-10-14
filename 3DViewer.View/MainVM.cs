@@ -53,7 +53,6 @@ namespace _3DViewer.View
         public ICommand MouseUpCommand { get; }
         public ICommand MouseMoveCommand { get; }
         public ICommand MouseWheelCommand { get; }
-
         public ICommand KeyDownCommand { get; }
         public ICommand SizeChangedCommand { get; }
 
@@ -65,11 +64,11 @@ namespace _3DViewer.View
             stream.Write(obj, 0, obj.Length);
 
             _objVertices.ParseObj(stream);
-            _bitmapGenerator = new BitmapGenerator(_objVertices, _width, _height);
             Bitmap = new(_width, _height, 96, 96, PixelFormats.Pbgra32, null);
+            _bitmapGenerator = new BitmapGenerator(_objVertices, _width, _height);
             _pbgra32 = new Pbgra32Bitmap(Bitmap);
 
-            DrawNewFrame();
+         //   DrawNewFrame();
 
             MouseDownCommand = new RelayCommand<Point>((point) => MouseDown(point));
             MouseUpCommand = new RelayCommand(MouseUp);
@@ -170,8 +169,8 @@ namespace _3DViewer.View
             _stopwatch.Restart();
             Bitmap.Lock();
             btm = _bitmapGenerator.GenerateImage();
-           // Marshal.Copy(btm, 0, Bitmap.BackBuffer, btm.Length);
-           // Bitmap.AddDirtyRect(new Int32Rect(0, 0, _width, _height));
+         // Marshal.Copy(btm, 0, Bitmap.BackBuffer, btm.Length);
+         //   Bitmap.AddDirtyRect(new Int32Rect(0, 0, _width, _height));
             Bitmap.WritePixels(new Int32Rect(0, 0, _width, _height), btm, _width * 4, 0);
             Bitmap.Unlock();
 
