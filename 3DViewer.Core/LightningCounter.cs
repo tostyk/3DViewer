@@ -9,7 +9,7 @@ namespace _3DViewer.Core
         public Vector3 AmbientAlbedo;
 
         public float kA = 0.2f;
-        public float kD = 0.2f;
+        public float kD = 0.3f;
         public float kS = 0.5f;
 
         public float SpecularPower = 10.0f;
@@ -34,13 +34,28 @@ namespace _3DViewer.Core
                 specular.Blue
                ));
         }
-
-        public static float Lambert(Vector3[] triangleCoordinates, Vector3 lightningPos)
+        public static float Lambert(Vector4[] triangleCoordinates, Vector3 lightningPos)
         {
-            Vector3 n = Vector3.Normalize(
-                Vector3.Cross(
-                       triangleCoordinates[2] - triangleCoordinates[0],
-                       triangleCoordinates[1] - triangleCoordinates[0]));
+            Vector3 a = new Vector3
+            {
+                X = triangleCoordinates[0].X,
+                Y = triangleCoordinates[0].Y,
+                Z = triangleCoordinates[0].Z
+            };
+            Vector3 b = new Vector3
+            {
+                X = triangleCoordinates[1].X,
+                Y = triangleCoordinates[1].Y,
+                Z = triangleCoordinates[1].Z
+            };
+            Vector3 c = new Vector3
+            {
+                X = triangleCoordinates[2].X,
+                Y = triangleCoordinates[2].Y,
+                Z = triangleCoordinates[2].Z
+            };
+
+            Vector3 n = Vector3.Normalize(Vector3.Cross(c - a, b - a));
 
             Vector3 normalCamera = Vector3.Normalize(-lightningPos);
 

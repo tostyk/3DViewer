@@ -10,7 +10,7 @@ namespace _3DViewer.Core
         public int[][] Polygons = Array.Empty<int[]>();
         public int[][] Triangles = Array.Empty<int[]>();
 
-        //to count normal
+        //to count normals
         public List<int>[] VertexTriangles = Array.Empty<List<int>>(); 
 
         public void ParseObj(MemoryStream stream)
@@ -100,22 +100,26 @@ namespace _3DViewer.Core
 
             for(int i = 0; i < Triangles.Length; i++)
             {
-                if (VertexTriangles[Triangles[i][0]] == null)
+                int vertNum0 = Triangles[i][0];
+                int vertNum1 = Triangles[i][1];
+                int vertNum2 = Triangles[i][2];
+
+                if (VertexTriangles[vertNum0] == null)
                 {
-                    VertexTriangles[Triangles[i][0]] = new();
+                    VertexTriangles[vertNum0] = new();
                 }
-                if (VertexTriangles[Triangles[i][1]] == null)
+                if (VertexTriangles[vertNum1] == null)
                 {
-                    VertexTriangles[Triangles[i][1]] = new();
+                    VertexTriangles[vertNum1] = new();
                 }
-                if (VertexTriangles[Triangles[i][2]] == null)
+                if (VertexTriangles[vertNum2] == null)
                 {
-                    VertexTriangles[Triangles[i][2]] = new();
+                    VertexTriangles[vertNum2] = new();
                 }
 
-                VertexTriangles[Triangles[i][0]].Add(i);
-                VertexTriangles[Triangles[i][1]].Add(i);
-                VertexTriangles[Triangles[i][2]].Add(i);
+                VertexTriangles[vertNum0].Add(i);
+                VertexTriangles[vertNum1].Add(i);
+                VertexTriangles[vertNum2].Add(i);
             }
         }
     }

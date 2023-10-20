@@ -14,6 +14,8 @@ namespace _3DViewer.Core
         public Vector3 Target;
         public Vector3 Position;
         public Vector3 StartPosition;
+        public Vector3 ViewerPosition;
+        public Vector3 LightPosition;
 
         public float ZFar = 100f;
         public float ZNear = 0.01f;
@@ -31,6 +33,8 @@ namespace _3DViewer.Core
             Target = new(0, 0, 0);
             Position = new(0, 0, 1);
             StartPosition = new(0, 0, 1);
+            ViewerPosition = new(0, 0, 1);
+            LightPosition = new (-1, -1, -2);
 
             Pitch = 0f;
             Yaw = 0f;
