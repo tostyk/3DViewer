@@ -38,11 +38,9 @@ namespace _3DViewer.Core
         private float _intensivityCoef = 0.7f;
 
         private Color BackgroundColor = new(255, 255, 255, 255);
-        private Color DiffuseColor = new(255, 210, 10, 10);
-        private Color AmbientColor = new(255, 12, 10, 122);
-        private Color SpecularColor = new(255, 100, 100, 100);
-
-        private Vector3 _lightPosition;
+        private Color DiffuseColor = new(255, 156, 10, 0);
+        private Color AmbientColor = new(255, 10, 120, 0);
+        private Color SpecularColor = new(255, 247, 234, 0);
 
         private LightningCounter _lightningCounter;
 
@@ -58,7 +56,6 @@ namespace _3DViewer.Core
                 SpecularColor
                 );
             _camera = new Camera();
-            _lightPosition = _camera.Position;
             _width = width;
             _height = height;
 
@@ -263,7 +260,7 @@ namespace _3DViewer.Core
                 }
             }
         }
-        
+
         private void DrawKraskouski(int[] vertices)
         {
 
@@ -290,7 +287,7 @@ namespace _3DViewer.Core
             //don't remove poor lambert
 
             byte currAlpha = 255;
-            float intensivity = LightningCounter.Lambert(inta, intb, intc, Vector3.Negate(_camera.LightPosition));
+            float intensivity = LightningCounter.Lambert(inta, intb, intc, _camera.LightPosition);
             if (intensivity < 0)
             {
                 intensivity = 0;
@@ -356,8 +353,10 @@ namespace _3DViewer.Core
 
             for (int y = top; y < bottom; y++)
             {
-                Vector3 n1 = wna + (wnc - wna) * (y - a.Y) / (c.Y - a.Y);
-                Vector3 n2 = wna + (wnb - wna) * (y - a.Y) / (b.Y - a.Y);
+                Vector3 n1 =  wna + (wnc - wna) * (y - a.Y) / (c.Y - a.Y);
+
+                Vector3 n2 = y < b.Y ? wna + (wnb - wna) * (y - a.Y) / (b.Y - a.Y)
+                    : wnb + (wnc - wnb) * (y - b.Y) / (c.Y - b.Y);
 
                 n1 = Vector3.Normalize(n1);
                 n2 = Vector3.Normalize(n2);
@@ -367,6 +366,7 @@ namespace _3DViewer.Core
                 if (lp.X > rp.X)
                 {
                     (lp, rp) = (rp, lp);
+                    (n1, n2) = (n2, n1);
                 }
                 int left = Math.Max(0, Convert.ToInt32(Math.Ceiling(lp.X)));
                 int right = Math.Min(_width, Convert.ToInt32(Math.Ceiling(rp.X)));
@@ -395,7 +395,7 @@ namespace _3DViewer.Core
 
                         var diffuse = _lightningCounter.CountDiffuse(normal, _camera.LightPosition);
 
-                        var specular = _lightningCounter.CountSpecular(normal, _camera.LightPosition, _camera.ViewerPosition);
+                        var specular = _lightningCounter.CountSpecular(normal, _camera.LightPosition, _camera.Position);
 
                         var colorCount = 255 * (Vector3.Normalize(ambient + diffuse + specular));
 
@@ -466,8 +466,6 @@ namespace _3DViewer.Core
 
         private void TriangleRasterization()
         {
-            //VerticesNormals();
-            _lightPosition = _camera.Position;
 
             Parallel.ForEach(Partitioner.Create(0, _modelCoordinates.Triangles.Length), (Action<Tuple<int, int>>)(range =>
             {

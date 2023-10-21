@@ -13,7 +13,6 @@ namespace _3DViewer.Core
         public Vector3 Up;
         public Vector3 Target;
         public Vector3 Position;
-        public Vector3 StartPosition;
         public Vector3 ViewerPosition;
         public Vector3 LightPosition;
 
@@ -31,10 +30,11 @@ namespace _3DViewer.Core
         {
             Up = new(0, 1, 0);
             Target = new(0, 0, 0);
-            Position = new(0, 0, 1);
-            StartPosition = new(0, 0, 1);
-            ViewerPosition = new(0, 0, 1);
-            LightPosition = new (-1, -1, -2);
+
+            Position = new(0, 0, 0);
+            ViewerPosition = Position;
+
+            LightPosition = new (1, 1, 2);
 
             Pitch = 0f;
             Yaw = 0f;
@@ -47,7 +47,7 @@ namespace _3DViewer.Core
 
             Position.Z = Math.Max(ZNear + radius, radius / (float)Math.Sin(Math.Min(FOV / 2, hFov / 2)));
 
-            StartPosition = Position;
+            ViewerPosition = Position;
         }
 
         public void ReplaceCameraByScreenCoordinates(
@@ -63,7 +63,7 @@ namespace _3DViewer.Core
             Pitch = (float)Math.Clamp(Pitch, -Math.PI / 2 + 0.1f, Math.PI / 2 - 0.1f); ;
 
             Matrix4x4 rotation = Matrix4x4.CreateFromYawPitchRoll(Yaw, Pitch, Roll);
-            Position = Vector3.Transform(StartPosition, rotation);
+            Position = Vector3.Transform(ViewerPosition, rotation);
         }
     }
 }
