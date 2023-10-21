@@ -8,9 +8,9 @@ namespace _3DViewer.Core
         public Vector3 SpecularAlbedo;
         public Vector3 AmbientAlbedo;
 
-        public float kA = 0.1f;
-        public float kD = 0.1f;
-        public float kS = 0.1f;
+        public float kA = 0.2f;
+        public float kD = 0.3f;
+        public float kS = 0.5f;
 
         public float SpecularPower = 10.0f;
 

@@ -39,7 +39,7 @@ namespace _3DViewer.Core
 
         private Color BackgroundColor = new(255, 255, 255, 255);
         private Color DiffuseColor = new(255, 156, 0, 56);
-        private Color AmbientColor = new(255, 10, 12, 0);
+        private Color AmbientColor = new(255, 10, 12, 100);
         private Color SpecularColor = new(255, 10, 10, 10);
 
 
@@ -387,7 +387,7 @@ namespace _3DViewer.Core
                         //**********  NO NEDD TO REMOVE **********//
 
                         var diffuse = _lightningCounter.CountDiffuse(normal, _camera.LightPosition);
-                        var specular = _lightningCounter.CountSpecular(normal, _camera.LightPosition, _camera.Position);
+                        var specular = _lightningCounter.CountSpecular(normal, _camera.LightPosition, -_camera.Position);
                         var colorCount = 255 * (Vector3.Normalize(ambient + diffuse + specular));
 
                         //****************************************//
@@ -401,9 +401,9 @@ namespace _3DViewer.Core
                         //****************************************//
 
                         //begin lambert
-                        
+
                         /*
-                         * currAlpha = (byte)(255 - intensivity * _intensivityCoef * 255);
+                                                currAlpha = (byte)(255 - intensivity * _intensivityCoef * 255);
                         */
 
                         //end lambert
