@@ -38,9 +38,10 @@ namespace _3DViewer.Core
         private float _intensivityCoef = 0.7f;
 
         private Color BackgroundColor = new(255, 255, 255, 255);
-        private Color DiffuseColor = new(255, 156, 10, 0);
-        private Color AmbientColor = new(255, 10, 120, 0);
-        private Color SpecularColor = new(255, 247, 234, 0);
+        private Color DiffuseColor = new(255, 156, 0, 56);
+        private Color AmbientColor = new(255, 10, 12, 0);
+        private Color SpecularColor = new(255, 10, 10, 10);
+
 
         private LightningCounter _lightningCounter;
 
@@ -50,6 +51,7 @@ namespace _3DViewer.Core
             int height
             )
         {
+
             _lightningCounter = new LightningCounter(
                 AmbientColor,
                 DiffuseColor,
@@ -264,37 +266,6 @@ namespace _3DViewer.Core
         private void DrawKraskouski(int[] vertices)
         {
 
-            Vector3 inta = new Vector3
-            {
-                X = _worldCoordinates[vertices[0]].X,
-                Y = _worldCoordinates[vertices[0]].Y,
-                Z = _worldCoordinates[vertices[0]].Z
-            };
-
-            Vector3 intb = new Vector3
-            {
-                X = _worldCoordinates[vertices[1]].X,
-                Y = _worldCoordinates[vertices[1]].Y,
-                Z = _worldCoordinates[vertices[1]].Z
-            };
-            Vector3 intc = new Vector3
-            {
-                X = _worldCoordinates[vertices[2]].X,
-                Y = _worldCoordinates[vertices[2]].Y,
-                Z = _worldCoordinates[vertices[2]].Z
-            };
-
-            //don't remove poor lambert
-
-            byte currAlpha = 255;
-            float intensivity = LightningCounter.Lambert(inta, intb, intc, _camera.LightPosition);
-            if (intensivity < 0)
-            {
-                intensivity = 0;
-                // return;
-            }
-
-
             Vector3 a = new Vector3
             {
                 X = _windowCoordinates[vertices[0]].X,
@@ -316,6 +287,28 @@ namespace _3DViewer.Core
             };
 
             if (Vector3.Dot(Vector3.Normalize(Vector3.Cross(a - b, c - b)), _camera.ViewerPosition) < 0) return;
+
+            Vector3 inta = new Vector3
+            {
+                X = _worldCoordinates[vertices[0]].X,
+                Y = _worldCoordinates[vertices[0]].Y,
+                Z = _worldCoordinates[vertices[0]].Z
+            };
+
+            Vector3 intb = new Vector3
+            {
+                X = _worldCoordinates[vertices[1]].X,
+                Y = _worldCoordinates[vertices[1]].Y,
+                Z = _worldCoordinates[vertices[1]].Z
+            };
+            Vector3 intc = new Vector3
+            {
+                X = _worldCoordinates[vertices[2]].X,
+                Y = _worldCoordinates[vertices[2]].Y,
+                Z = _worldCoordinates[vertices[2]].Z
+            };
+
+            var normal = -Vector3.Normalize(Vector3.Cross(inta - intb, intc - intb));
 
             var ambient = _lightningCounter.CountAmbient();
 
@@ -341,7 +334,6 @@ namespace _3DViewer.Core
 
             if (a.Y == c.Y) return;
 
-            var normal = Vector3.Normalize(Vector3.Cross(inta - intb, intc - intb));
 
             Vector3 kp1 = (c - a) / (c.Y - a.Y);
             Vector3 kp2 = (b - a) / (b.Y - a.Y);
@@ -350,10 +342,14 @@ namespace _3DViewer.Core
             int top = Math.Max(0, Convert.ToInt32(Math.Ceiling(a.Y)));
             int bottom = Math.Min(_height, Convert.ToInt32(Math.Ceiling(c.Y)));
 
+            byte currAlpha = 255;
+            byte currRed = 156;
+            byte currGreen = 0;
+            byte currBlue = 56;
 
             for (int y = top; y < bottom; y++)
             {
-                Vector3 n1 =  wna + (wnc - wna) * (y - a.Y) / (c.Y - a.Y);
+                Vector3 n1 = wna + (wnc - wna) * (y - a.Y) / (c.Y - a.Y);
 
                 Vector3 n2 = y < b.Y ? wna + (wnb - wna) * (y - a.Y) / (b.Y - a.Y)
                     : wnb + (wnc - wnb) * (y - b.Y) / (c.Y - b.Y);
@@ -382,27 +378,43 @@ namespace _3DViewer.Core
                     {
                         _zbuffer[ind] = Z;
 
-                        //lambert
-                        //no need to put it inside a cycle but easier to find
-                        //currAlpha = (byte)(255 - intensivity * _intensivityCoef * 255);
-                        byte currRed = 156;
-                        byte currGreen = 0;
-                        byte currBlue = 56;
-                        //phong
+                        //**********  NORMAL FOR EACH PIXEL **********//
                         normal = n1 + (n2 - n1) * (x - lp.X) / (rp.X - lp.X);
                         normal = Vector3.Normalize(normal);
+                        //****************************************//
 
+
+                        //**********  NO NEDD TO REMOVE **********//
 
                         var diffuse = _lightningCounter.CountDiffuse(normal, _camera.LightPosition);
-
                         var specular = _lightningCounter.CountSpecular(normal, _camera.LightPosition, _camera.Position);
-
                         var colorCount = 255 * (Vector3.Normalize(ambient + diffuse + specular));
 
+                        //****************************************//
+
+                        //**********  NO NEDD TO REMOVE **********//
+                        var intensivity = LightningCounter.Lambert(normal, _camera.LightPosition);
+                        if (intensivity < 0)
+                        {
+                            intensivity = 0;
+                        }
+                        //****************************************//
+
+                        //begin lambert
+                        
+                        /*
+                         * currAlpha = (byte)(255 - intensivity * _intensivityCoef * 255);
+                        */
+
+                        //end lambert
+
+                        // start phong
 
                         currRed = (byte)colorCount.X;
                         currGreen = (byte)colorCount.Y;
                         currBlue = (byte)colorCount.Z;
+
+                        // end phong
 
                         int point = ARGB * ind;
                         Color color = new Color(currAlpha, currRed, currGreen, currBlue);
@@ -416,64 +428,16 @@ namespace _3DViewer.Core
                 }
             }
         }
-        /*private void VerticesNormals()
-        {
-            _worldNormals = new Vector3[_worldCoordinates.Length];
-            Parallel.ForEach(Partitioner.Create(0, _worldCoordinates.Length), range =>
-            {
-                for (int j = range.Item1; j < range.Item2; j++)
-                {
-                    Vector3 sumNormals = new Vector3();
-                    for (int i = 0; i < _modelCoordinates.VertexTriangles[j].Count; i++)
-                    {
-                        var currTriangle = _modelCoordinates.Triangles[i];
-
-                        Vector4[] triangleVertices = new Vector4[currTriangle.Length];
-
-                        TriangleToCoordinates(_worldCoordinates, currTriangle, ref triangleVertices);
-
-                        Vector3 t0 = new Vector3
-                        {
-                            X = triangleVertices[0].X,
-                            Y = triangleVertices[0].Y,
-                            Z = triangleVertices[0].Z
-                        };
-
-                        Vector3 t1 = new Vector3
-                        {
-                            X = triangleVertices[1].X,
-                            Y = triangleVertices[1].Y,
-                            Z = triangleVertices[1].Z
-                        };
-                        Vector3 t2 = new Vector3
-                        {
-                            X = triangleVertices[2].X,
-                            Y = triangleVertices[2].Y,
-                            Z = triangleVertices[2].Z
-                        };
-
-                        var normal = Vector3.Normalize(Vector3.Cross(t2 - t0, t1 - t0));
-
-                        sumNormals += normal;
-
-                    }
-
-                    _worldNormals[j] = Vector3.Normalize(sumNormals);
-                }
-            });
-
-        }*/
-
         private void TriangleRasterization()
         {
 
-            Parallel.ForEach(Partitioner.Create(0, _modelCoordinates.Triangles.Length), (Action<Tuple<int, int>>)(range =>
+            Parallel.ForEach(Partitioner.Create(0, _modelCoordinates.Triangles.Length), range =>
             {
                 for (int j = range.Item1; j < range.Item2; j++)
                 {
                     DrawKraskouski(_modelCoordinates.Triangles[j]);
                 }
-            }));
+            });
         }
 
     }

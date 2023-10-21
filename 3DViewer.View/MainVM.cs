@@ -26,7 +26,7 @@ namespace _3DViewer.View
         private bool _rotation = false;
         private Point _prevPoint;
 
-        private int _width = 2000;
+        private int _width = 2500;
         private int _height = 1000;
         private float sensitivity = 0.08f;
         byte[] btm;

@@ -8,9 +8,9 @@ namespace _3DViewer.Core
         public Vector3 SpecularAlbedo;
         public Vector3 AmbientAlbedo;
 
-        public float kA = 0.2f;
-        public float kD = 0.3f;
-        public float kS = 0.5f;
+        public float kA = 0.1f;
+        public float kD = 0.1f;
+        public float kS = 0.1f;
 
         public float SpecularPower = 10.0f;
 
@@ -34,11 +34,9 @@ namespace _3DViewer.Core
                 specular.Blue
                ));
         }
-        public static float Lambert(Vector3 a, Vector3 b, Vector3 c, Vector3 lightningPos)
+        public static float Lambert(Vector3 n, Vector3 lightningPos)
         {
-            Vector3 n = Vector3.Normalize(Vector3.Cross(c - a, b - a));
-
-            Vector3 normalCamera = Vector3.Normalize(-lightningPos);
+            Vector3 normalCamera = Vector3.Normalize(lightningPos);
 
             return Vector3.Dot(normalCamera, n);
         }
