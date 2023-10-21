@@ -10,8 +10,8 @@ namespace _3DViewer.Core
         public int[][] Polygons = Array.Empty<int[]>();
         public int[][] Triangles = Array.Empty<int[]>();
 
-        //to count normals
-        public List<int>[] VertexTriangles = Array.Empty<List<int>>(); 
+        //to count normalsormals
+        public Vector3[] VerticesNormals = Array.Empty<Vector3>();
 
         public void ParseObj(MemoryStream stream)
         {
@@ -19,6 +19,7 @@ namespace _3DViewer.Core
             List<Vector4> vertices = new();
             List<Vector3> textureVertices = new();
             List<Vector3> normal = new();
+            Dictionary<int, List<int>> vertexNormals = new();
 
             List<List<int>> vTrianglses= new();
 
@@ -47,7 +48,20 @@ namespace _3DViewer.Core
                     {
                         if (element == "") continue;
                         IEnumerable<string> v1 = element.Split('/');
-                        polygon.Add(int.Parse(v1.First()) - 1);
+                        int vertex = int.Parse(v1.First()) - 1;
+                        polygon.Add(vertex);
+                        if(v1.Count() > 1)
+                        {
+                            int vertexNormal = int.Parse(v1.Last()) - 1;
+                            if(!vertexNormals.ContainsKey(vertex))
+                            {
+                                vertexNormals.Add(vertex, new());
+                            }
+                            if (!vertexNormals[vertex].Contains(vertexNormal))
+                            {
+                                vertexNormals[vertex].Add(vertexNormal);
+                            }
+                        }
                     }
                     polygons.Add(polygon.ToArray());
                 }
@@ -74,14 +88,44 @@ namespace _3DViewer.Core
 
             Vertices = vertices.ToArray();
             TextureVertices = textureVertices.ToArray();
+            
+            //must be set before calling CountTotalNormal
             Normals = normal.ToArray();
+            
             Polygons = polygons.ToArray();
+
+            VerticesNormals = new Vector3[Vertices.Length];
+
+            foreach (var normals in vertexNormals)
+            {
+                Vector3 totalNormal = CountTotalNormal(normals.Value);
+                VerticesNormals[normals.Key] = totalNormal;
+            }
         }
+
+        private Vector3 CountTotalNormal(IEnumerable<int> normalsNums)
+        {
+            Vector3 totalNormal = new Vector3();
+            List<Vector3> normals = new List<Vector3>();
+            foreach(var n in normalsNums)
+            {
+                normals.Add(Normals[n]);
+            }
+
+            foreach(Vector3 normal in normals)
+            {
+                totalNormal += Vector3.Normalize(normal);
+            }
+
+            totalNormal = Vector3.Normalize(totalNormal);
+
+            return totalNormal;
+        }
+
         public void SeparateTriangles()
         {
             List<int[]> triangles = new List<int[]>();
 
-            VertexTriangles = new List<int>[Vertices.Length];
 
             foreach (var polygon in Polygons)
             {
@@ -97,30 +141,6 @@ namespace _3DViewer.Core
             }
 
             Triangles = triangles.ToArray();
-
-            for(int i = 0; i < Triangles.Length; i++)
-            {
-                int vertNum0 = Triangles[i][0];
-                int vertNum1 = Triangles[i][1];
-                int vertNum2 = Triangles[i][2];
-
-                if (VertexTriangles[vertNum0] == null)
-                {
-                    VertexTriangles[vertNum0] = new();
-                }
-                if (VertexTriangles[vertNum1] == null)
-                {
-                    VertexTriangles[vertNum1] = new();
-                }
-                if (VertexTriangles[vertNum2] == null)
-                {
-                    VertexTriangles[vertNum2] = new();
-                }
-
-                VertexTriangles[vertNum0].Add(i);
-                VertexTriangles[vertNum1].Add(i);
-                VertexTriangles[vertNum2].Add(i);
-            }
         }
     }
 }
