@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using System.Runtime.Intrinsics;
 
 namespace _3DViewer.Core
 {
@@ -8,31 +9,72 @@ namespace _3DViewer.Core
         public Vector3 SpecularAlbedo;
         public Vector3 AmbientAlbedo;
 
-        public float kA = 0.2f;
-        public float kD = 0.3f;
-        public float kS = 0.5f;
+        public float kA = 0.4f;
+        public float kD = 0.4f;
+        public float kS = 0.2f;
 
-        public float SpecularPower = 10.0f;
+        public float SpecularPower = 10f;
+        public static Vector3 ColorVector3(Vector3 color)
+        {
+            float a = 2.51f;
+            float b = 0.03f;
+            float c = 2.43f;
+            float d = 0.59f;
+            float e = 0.14f;
 
+            Vector3 vector = new Vector3(color.X, color.Y, color.Z);
+
+            vector.X = Math.Clamp((vector.X * (a * vector.X + b)) / (vector.X * (c * vector.X + d) + e), 0.0f, 1.0f);
+            vector.Y = Math.Clamp((vector.Y * (a * vector.Y + b)) / (vector.Y * (c * vector.Y + d) + e), 0.0f, 1.0f);
+            vector.Z = Math.Clamp((vector.Z * (a * vector.Z + b)) / (vector.Z * (c * vector.Z + d) + e), 0.0f, 1.0f);
+
+            // gamma correction
+            vector.X = (float)Math.Pow(vector.X, 1 / 2.2);
+            vector.Y = (float)Math.Pow(vector.Y, 1 / 2.2);
+            vector.Z = (float)Math.Pow(vector.Z, 1 / 2.2);
+
+            return vector;
+        }
         public LightningCounter(Color ambient, Color diffuse, Color specular) 
         {
-            AmbientAlbedo = Vector3.Normalize(new Vector3(
+            
+
+            AmbientAlbedo = (new Vector3(
                 ambient.Red,
                 ambient.Green,
                 ambient.Blue
                ));
 
-            DiffuseAlbedo = Vector3.Normalize(new Vector3(
+            DiffuseAlbedo = (new Vector3(
                 diffuse.Red,
                 diffuse.Green,
                 diffuse.Blue
                ));
 
-            SpecularAlbedo = Vector3.Normalize(new Vector3(
+            SpecularAlbedo = (new Vector3(
                 specular.Red,
                 specular.Green,
                 specular.Blue
                ));
+
+            /*AmbientAlbedo.X /= (AmbientAlbedo.X + 1);
+            AmbientAlbedo.Y /= (AmbientAlbedo.Y + 1);
+            AmbientAlbedo.Z /= (AmbientAlbedo.Z + 1);
+
+
+            DiffuseAlbedo.X /= (DiffuseAlbedo.X + 1);
+            DiffuseAlbedo.Y /= (DiffuseAlbedo.Y + 1);
+            DiffuseAlbedo.Z /= (DiffuseAlbedo.Z + 1);
+
+            SpecularAlbedo.X /= (SpecularAlbedo.X + 1);
+            SpecularAlbedo.Y /= (SpecularAlbedo.Y + 1);
+            SpecularAlbedo.Z /= (SpecularAlbedo.Z + 1);*/
+
+            AmbientAlbedo /= 255;
+            DiffuseAlbedo /= 255;
+            SpecularAlbedo /= 255;
+
+
         }
         public static float Lambert(Vector3 n, Vector3 lightningPos)
         {

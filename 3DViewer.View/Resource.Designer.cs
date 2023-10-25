@@ -123,6 +123,16 @@ namespace _3DViewer.View {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Byte[].
         /// </summary>
+        public static byte[] mancubus {
+            get {
+                object obj = ResourceManager.GetObject("mancubus", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Byte[].
+        /// </summary>
         public static byte[] rose {
             get {
                 object obj = ResourceManager.GetObject("rose", resourceCulture);
