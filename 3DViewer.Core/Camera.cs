@@ -17,7 +17,7 @@ namespace _3DViewer.Core
         public Vector3 LightPosition;
 
         public float ZFar = 100f;
-        public float ZNear = 0.01f;
+        public float ZNear = 0.1f;
 
         public float FOV = (float)(Math.PI / 4); // 45deg Yaxis, 90deg Xaxis
 

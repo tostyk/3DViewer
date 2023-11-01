@@ -9,11 +9,27 @@ namespace _3DViewer.Core
         public Vector3 SpecularAlbedo;
         public Vector3 AmbientAlbedo;
 
-        public float kA = 0.4f;
-        public float kD = 0.4f;
-        public float kS = 0.2f;
+        public Vector3 BloomBrightness = new Vector3 (0.2126f, 0.7152f, 0.0722f);
+
+        public float[] weight = { 0.227027f, 0.1945946f, 0.1216216f, 0.054054f, 0.016216f };
+
+        public float kA = 2.1f;
+        public float kD = 1.5f;
+        public float kS = 1.1f;
 
         public float SpecularPower = 10f;
+       
+
+        public Vector3 CountBloom(Vector3 color)
+        {
+            Vector3 vector3 = new Vector3(color.X, color.Y, color.Z);
+            float dot = Vector3.Dot(vector3, BloomBrightness);
+            if(dot <= 1.0)
+            {
+                vector3 = new Vector3(0, 0, 0);
+            }
+            return vector3;
+        }
         public static Vector3 ColorVector3(Vector3 color)
         {
             float a = 2.51f;
@@ -81,20 +97,6 @@ namespace _3DViewer.Core
             Vector3 normalCamera = Vector3.Normalize(lightningPos);
 
             return Vector3.Dot(normalCamera, n);
-        }
-        public Vector3 CountTotalIntensivity(Vector3 N, Vector3 L, Vector3 V)
-        {
-            N = Vector3.Normalize(N);
-            L = Vector3.Normalize(L);
-            V = Vector3.Normalize(V);
-
-            Vector3 R = L - 2 * Vector3.Dot(L, N) * N;
-
-            Vector3 Ia = kA * AmbientAlbedo;
-            Vector3 Id = kD * Math.Max(Vector3.Dot(N, L), 0.0f) * DiffuseAlbedo;
-            Vector3 Is = kS * (float)Math.Pow(Math.Max(Vector3.Dot(R, V), 0.0f), SpecularPower) * SpecularAlbedo;
-
-            return Ia + Id + Is;
         }
 
         public Vector3 CountAmbient()

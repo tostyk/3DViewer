@@ -31,13 +31,14 @@ namespace _3DViewer.Core
 
         private byte[] _image;
         private double[] _zbuffer;
+        private double[] _brightness;
 
         private float _intensivityCoef = 0.7f;
 
         private Color BackgroundColor = new(255, 255, 255, 255);
-        private Color AmbientColor = new(255, 0, 255, 0);
+        private Color AmbientColor = new(255, 0, 0, 255);
         private Color DiffuseColor = new(255, 255, 77, 0);
-        private Color SpecularColor = new(255, 0, 255, 0);
+        private Color SpecularColor = new(255, 0, 255, 50);
 
 
         private LightningCounter _lightningCounter;
@@ -74,7 +75,8 @@ namespace _3DViewer.Core
             int height)
         {
             _image = new byte[height * width * ARGB];
-            _zbuffer = new double[height * width * ARGB];
+            _brightness = new double[height * width * ARGB];
+            _zbuffer = new double[height * width];
 
             _width = width;
             _height = height;
@@ -206,6 +208,7 @@ namespace _3DViewer.Core
                     _image[i * 4 + 1] = BackgroundColor.Green;
                     _image[i * 4 + 2] = BackgroundColor.Red;
                     _image[i * 4 + 3] = BackgroundColor.Alpha;
+                    _brightness[i] = 0;
                     _zbuffer[i] = double.PositiveInfinity;
                 }
             });
@@ -259,43 +262,8 @@ namespace _3DViewer.Core
                 }
             }
         }
-        public Vector3 Barycentric(Vector3 v0, Vector3 v1, Vector3 v2)
+        private void DrawTriangle(int[] vertices)
         {
-            Vector3 bar = new Vector3();
-            float d00 = Vector3.Dot(v0, v0);
-            float d01 = Vector3.Dot(v0, v1);
-            float d11 = Vector3.Dot(v1, v1);
-            float d20 = Vector3.Dot(v2, v0);
-            float d21 = Vector3.Dot(v2, v1);
-            float denom = d00 * d11 - d01 * d01;
-            bar.X = (d11 * d20 - d01 * d21) / denom;
-            bar.Y = (d00 * d21 - d01 * d20) / denom;
-            bar.Z = 1.0f - bar.X - bar.Y;
-            return bar;
-        }
-
-        private void DrawKraskouski(int[] vertices)
-        {
-            Vector3 a0 = new Vector3
-            {
-                X = _windowCoordinates[vertices[0]].X,
-                Y = _windowCoordinates[vertices[0]].Y,
-                Z = _windowCoordinates[vertices[0]].Z
-            };
-
-            Vector3 b0 = new Vector3
-            {
-                X = _windowCoordinates[vertices[1]].X,
-                Y = _windowCoordinates[vertices[1]].Y,
-                Z = _windowCoordinates[vertices[1]].Z
-            };
-            Vector3 c0 = new Vector3
-            {
-                X = _windowCoordinates[vertices[2]].X,
-                Y = _windowCoordinates[vertices[2]].Y,
-                Z = _windowCoordinates[vertices[2]].Z
-            };
-
             Vector3 a = new Vector3
             {
                 X = _windowCoordinates[vertices[0]].X,
@@ -372,10 +340,10 @@ namespace _3DViewer.Core
             int top = Math.Max(0, Convert.ToInt32(Math.Ceiling(a.Y)));
             int bottom = Math.Min(_height, Convert.ToInt32(Math.Ceiling(c.Y)));
 
-            byte currAlpha = 255;
-            byte currRed = 156;
-            byte currGreen = 0;
-            byte currBlue = 56;
+            byte currAlpha = AmbientColor.Alpha;
+            byte currRed = AmbientColor.Red;
+            byte currGreen = AmbientColor.Green;
+            byte currBlue = AmbientColor.Blue;
 
             for (int y = top; y < bottom; y++)
             {
@@ -390,7 +358,6 @@ namespace _3DViewer.Core
                 Vector3 lp = a + (y - a.Y) * kp1;
                 Vector3 rp = y < b.Y ? a + (y - a.Y) * kp2 : b + (y - b.Y) * kp3;
 
-
                 if (lp.X > rp.X)
                 {
                     (lp, rp) = (rp, lp);
@@ -400,44 +367,35 @@ namespace _3DViewer.Core
                 int left = Math.Max(0, Convert.ToInt32(Math.Ceiling(lp.X)));
                 int right = Math.Min(_width, Convert.ToInt32(Math.Ceiling(rp.X)));
 
+                Vector3 kp = (rp - lp) / (rp.X - lp.X);
+                Vector3 kn = (n2 - n1) / (rp.X - lp.X);
+
                 for (int x = left; x < right; x++)
                 {
                     int ind = y * _width + x;
 
-                    float Z = lp.Z + (rp.Z - lp.Z) * (x - lp.X) / (rp.X - lp.X);
-/*
-                    Vector3 _point = new Vector3(x, y, Z);
+                    Vector3 p = lp + (x - lp.X) * kp;
 
-                    Vector3 v0 = y < b.Y ?  a0 - b0 : b0 - c0;
-                    Vector3 v1 = a0 - c0;
-                    Vector3 v2 = y < b.Y ? -a0 + _point : -b0 + _point;
-
-                    Vector3 bar = Barycentric(v0, v1, v2);
-
-
-
-                    Z = 0;
-
-                    Z += _windowCoordinates[vertices[0]].Z * bar.X;
-                    Z += _windowCoordinates[vertices[1]].Z * bar.Y;
-                    Z += _windowCoordinates[vertices[2]].Z * bar.Z;*/
-
-                    if (_zbuffer[ind] > Z)
+                    if (_zbuffer[ind] > p.Z)
                     {
-                        _zbuffer[ind] = Z;
+                        _zbuffer[ind] = p.Z;
 
-                        //**********  NORMAL FOR EACH PIXEL **********//
+                        //**********  NORMAL FOR EACH PIXEL ********//
 
-                        normal = n1 + (n2 - n1) * (x - lp.X) / (rp.X - lp.X);
+                        normal = n1 + (x - lp.X) * kn;
                         normal = Vector3.Normalize(normal);
 
-                        //****************************************//
+                        //******************************************//
 
-                        //**********  NO NEED TO REMOVE **********//
+                        //************  NO NEED TO REMOVE **********//
 
                         var diffuse = _lightningCounter.CountDiffuse(normal, _camera.LightPosition);
                         var specular = _lightningCounter.CountSpecular(normal, _camera.LightPosition, -_camera.Position);
-                        var colorCount = 255 * (LightningCounter.ColorVector3(specular + diffuse + ambient));
+
+                        Vector3 fragColor = specular + diffuse + ambient;
+                        Vector3 result = LightningCounter.ColorVector3(fragColor);
+
+                        var colorCount = 255 * result;
 
                         //****************************************//
 
@@ -449,21 +407,22 @@ namespace _3DViewer.Core
                         }
                         //****************************************//
 
-                        //begin lambert
+                        //--begin lambert--//
 
 
-                        // currAlpha = (byte)(255 - intensivity * _intensivityCoef * 255);
+                         //currAlpha = (byte)(255 - intensivity * _intensivityCoef * 255);
 
 
-                        //end lambert
+                        //--end lambert--//
 
-                        // start phong
+
+                        //--start phong--//
 
                         currRed = (byte)colorCount.X;
                         currGreen = (byte)colorCount.Y;
                         currBlue = (byte)colorCount.Z;
 
-                        // end phong
+                        //--end phong--//
 
                         int point = ARGB * ind;
                         Color color = new Color(currAlpha, currRed, currGreen, currBlue);
@@ -484,7 +443,7 @@ namespace _3DViewer.Core
             {
                 for (int j = range.Item1; j < range.Item2; j++)
                 {
-                    DrawKraskouski(_modelCoordinates.Triangles[j]);
+                    DrawTriangle(_modelCoordinates.Triangles[j]);
                 }
             });
         }

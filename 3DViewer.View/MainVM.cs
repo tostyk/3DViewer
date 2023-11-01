@@ -26,7 +26,7 @@ namespace _3DViewer.View
         private bool _rotation = false;
         private Point _prevPoint;
 
-        private int _width = 3000;
+        private int _width = 2000;
         private int _height = 1000;
         private float sensitivity = 0.08f;
         byte[] btm;
@@ -58,7 +58,7 @@ namespace _3DViewer.View
 
         public MainVM()
         {
-            var obj = Resource.cat;
+            var obj = Resource.spaceship;
 
             MemoryStream stream = new();
             stream.Write(obj, 0, obj.Length);

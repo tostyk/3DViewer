@@ -133,9 +133,39 @@ namespace _3DViewer.View {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Byte[].
         /// </summary>
+        public static byte[] PinkSoldier {
+            get {
+                object obj = ResourceManager.GetObject("PinkSoldier", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Byte[].
+        /// </summary>
         public static byte[] rose {
             get {
                 object obj = ResourceManager.GetObject("rose", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Byte[].
+        /// </summary>
+        public static byte[] spaceship {
+            get {
+                object obj = ResourceManager.GetObject("spaceship", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Byte[].
+        /// </summary>
+        public static byte[] spider {
+            get {
+                object obj = ResourceManager.GetObject("spider", resourceCulture);
                 return ((byte[])(obj));
             }
         }
