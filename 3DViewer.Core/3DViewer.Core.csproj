@@ -8,4 +8,10 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Reference Include="ImageBlur.Core">
+      <HintPath>..\..\..\COS\ImageBlur.Core\ImageBlur.Core\bin\Debug\net6.0\ImageBlur.Core.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

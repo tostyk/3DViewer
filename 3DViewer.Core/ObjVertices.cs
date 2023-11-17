@@ -10,6 +10,8 @@ namespace _3DViewer.Core
         public int[][] Polygons = Array.Empty<int[]>();
         public int[][] Triangles = Array.Empty<int[]>();
 
+
+
         //to count normalsormals
         public Vector3[] VerticesNormals = Array.Empty<Vector3>();
 
@@ -102,7 +104,17 @@ namespace _3DViewer.Core
                 VerticesNormals[normals.Key] = totalNormal;
             }
         }
+        public void ParseMtl(MemoryStream stream)
+        {
+            string[] lines;
 
+            using (StreamReader reader = new StreamReader(stream))
+            {
+                reader.BaseStream.Seek(0, SeekOrigin.Begin);
+                var a = reader.ReadToEnd();
+                lines = a.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            }
+        }
         private Vector3 CountTotalNormal(IEnumerable<int> normalsNums)
         {
             Vector3 totalNormal = new Vector3();

@@ -11,25 +11,12 @@ namespace _3DViewer.Core
 
         public Vector3 BloomBrightness = new Vector3 (0.2126f, 0.7152f, 0.0722f);
 
-        public float[] weight = { 0.227027f, 0.1945946f, 0.1216216f, 0.054054f, 0.016216f };
+        public float kA = 0.6f;
+        public float kD = 1.0f;
+        public float kS = 2.2f;
 
-        public float kA = 2.1f;
-        public float kD = 1.5f;
-        public float kS = 1.1f;
+        public float SpecularPower = 20f;
 
-        public float SpecularPower = 10f;
-       
-
-        public Vector3 CountBloom(Vector3 color)
-        {
-            Vector3 vector3 = new Vector3(color.X, color.Y, color.Z);
-            float dot = Vector3.Dot(vector3, BloomBrightness);
-            if(dot <= 1.0)
-            {
-                vector3 = new Vector3(0, 0, 0);
-            }
-            return vector3;
-        }
         public static Vector3 ColorVector3(Vector3 color)
         {
             float a = 2.51f;
@@ -51,10 +38,28 @@ namespace _3DViewer.Core
 
             return vector;
         }
+        public LightningCounter(Vector4 ambient, Vector4 diffuse, Vector4 specular)
+        {
+            AmbientAlbedo = (new Vector3(
+                ambient.X,
+                ambient.Y,
+                ambient.Z
+               ));
+
+            DiffuseAlbedo = (new Vector3(
+                diffuse.X,
+                diffuse.Y,
+                diffuse.Z
+               ));
+
+            SpecularAlbedo = (new Vector3(
+                specular.X,
+                specular.Y,
+                specular.Z
+               ));
+        }
         public LightningCounter(Color ambient, Color diffuse, Color specular) 
         {
-            
-
             AmbientAlbedo = (new Vector3(
                 ambient.Red,
                 ambient.Green,
@@ -73,24 +78,9 @@ namespace _3DViewer.Core
                 specular.Blue
                ));
 
-            /*AmbientAlbedo.X /= (AmbientAlbedo.X + 1);
-            AmbientAlbedo.Y /= (AmbientAlbedo.Y + 1);
-            AmbientAlbedo.Z /= (AmbientAlbedo.Z + 1);
-
-
-            DiffuseAlbedo.X /= (DiffuseAlbedo.X + 1);
-            DiffuseAlbedo.Y /= (DiffuseAlbedo.Y + 1);
-            DiffuseAlbedo.Z /= (DiffuseAlbedo.Z + 1);
-
-            SpecularAlbedo.X /= (SpecularAlbedo.X + 1);
-            SpecularAlbedo.Y /= (SpecularAlbedo.Y + 1);
-            SpecularAlbedo.Z /= (SpecularAlbedo.Z + 1);*/
-
             AmbientAlbedo /= 255;
             DiffuseAlbedo /= 255;
             SpecularAlbedo /= 255;
-
-
         }
         public static float Lambert(Vector3 n, Vector3 lightningPos)
         {

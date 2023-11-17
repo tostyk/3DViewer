@@ -118,37 +118,22 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="beecat" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\beecat.obj;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  <data name="beecat2" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\beecat2.obj;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
-  <data name="cat" type="System.Resources.ResXFileRef, System.Windows.Forms">
+  <data name="cat_bump" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Cat_bump.jpg;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="cat_diffuse" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Cat_diffuse.jpg;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="cat_mtl" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\12221_Cat_v1_l3.mtl;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="cat_obj" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Resources\cat.obj;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="creature_bird" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\18678_Creature_Bird_w_3_heads_V1.obj;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="cube" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\cube.obj;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="denis" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Resources\rp_dennis_posed_004_30k.OBJ;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="dragon" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Fantasy Dragon.obj;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="mancubus" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\mancubus.obj;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="PinkSoldier" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\PinkSoldier_sketch.obj;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="rose" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\rose.obj;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="spaceship" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Intergalactic_Spaceship-(Wavefront).obj;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="spider" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\spider.obj;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
 </root>

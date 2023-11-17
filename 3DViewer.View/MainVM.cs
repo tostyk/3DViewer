@@ -20,11 +20,14 @@ namespace _3DViewer.View
     {
         private Pbgra32Bitmap _pbgra32;
         private WriteableBitmap _bitmap;
+        private WriteableBitmap _diffuseBitmap;
 
         private readonly ObjVertices _objVertices = new();
         private readonly BitmapGenerator _bitmapGenerator;
+
         private bool _rotation = false;
         private Point _prevPoint;
+        private byte[] _diffuseData;
 
         private int _width = 2000;
         private int _height = 1000;
@@ -58,14 +61,39 @@ namespace _3DViewer.View
 
         public MainVM()
         {
-            var obj = Resource.spaceship;
+            var obj = Resource.cat_obj;
+            var mtl = Resource.cat_mtl;
+            var diffuse = Resource.cat_diffuse;
 
-            MemoryStream stream = new();
-            stream.Write(obj, 0, obj.Length);
+            using (MemoryStream stream = new MemoryStream())
+            {
+                stream.Write(obj, 0, obj.Length);
+                _objVertices.ParseObj(stream);
+            }
 
-            _objVertices.ParseObj(stream);
+
+            using (MemoryStream stream = new MemoryStream())
+            {
+                stream.Write(mtl, 0, mtl.Length);
+                _objVertices.ParseMtl(stream);
+            }
+
+            using (MemoryStream stream = new MemoryStream())
+            {
+                stream.Write(diffuse, 0, diffuse.Length);
+                stream.Seek(0, SeekOrigin.Begin);
+
+                BitmapFrame bitmapFrame = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+
+                _diffuseBitmap = new(new FormatConvertedBitmap(bitmapFrame, PixelFormats.Pbgra32, null, 0));
+
+                _diffuseData = new byte[_diffuseBitmap.PixelWidth * _diffuseBitmap.PixelHeight * 4];
+                _diffuseBitmap.CopyPixels(_diffuseData, _diffuseBitmap.PixelWidth * 4, 0);
+            }
+
             Bitmap = new(_width, _height, 96, 96, PixelFormats.Pbgra32, null);
             _bitmapGenerator = new BitmapGenerator(_objVertices, _width, _height);
+            _bitmapGenerator.SetDiffuseMap(_diffuseData, _diffuseBitmap.PixelWidth, _diffuseBitmap.PixelHeight);
             _pbgra32 = new Pbgra32Bitmap(Bitmap);
 
          //   DrawNewFrame();

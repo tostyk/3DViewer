@@ -17,6 +17,9 @@ namespace _3DViewer.Core
         private int _width;
         private int _height;
 
+        private int _widthDiffuse;
+        private int _heightDiffuse;
+
         private float minDepth = 0f;
         private float maxDepth = 1f;
         private float minX = 0f;
@@ -31,17 +34,21 @@ namespace _3DViewer.Core
 
         private byte[] _image;
         private double[] _zbuffer;
-        private double[] _brightness;
+        private float[] _brightness;
+        private float[] _colors;
+
+        private byte[] _imageDiffuse;
+
 
         private float _intensivityCoef = 0.7f;
-
-        private Color BackgroundColor = new(255, 255, 255, 255);
-        private Color AmbientColor = new(255, 0, 0, 255);
-        private Color DiffuseColor = new(255, 255, 77, 0);
-        private Color SpecularColor = new(255, 0, 255, 50);
-
+        //x = b, y = g, z = r
+        private Vector4 BackgroundColor = new(0, 0, 0, 1f);
+        private Vector4 AmbientColor = new(0f, 0.0f, 1f, 1f);
+        private Vector4 DiffuseColor = new(0.5f, 0.0f, 1f, 1f);
+        private Vector4 SpecularColor = new(1f, 1f, 1f, 1f);
 
         private LightningCounter _lightningCounter;
+        private BloomCounter _bloomCounter;
 
         public BitmapGenerator(
             ObjVertices modelCoordinates,
@@ -49,12 +56,15 @@ namespace _3DViewer.Core
             int height
             )
         {
+            BloomCounter.CountGaussian();
 
             _lightningCounter = new LightningCounter(
                 AmbientColor,
                 DiffuseColor,
                 SpecularColor
                 );
+
+
             _camera = new Camera();
             _width = width;
             _height = height;
@@ -75,7 +85,8 @@ namespace _3DViewer.Core
             int height)
         {
             _image = new byte[height * width * ARGB];
-            _brightness = new double[height * width * ARGB];
+            _brightness = new float[height * width * ARGB];
+            _colors = new float[height * width * ARGB];
             _zbuffer = new double[height * width];
 
             _width = width;
@@ -86,7 +97,12 @@ namespace _3DViewer.Core
             currView = View();
             currModel = Model();
         }
-
+        public void SetDiffuseMap(byte[] diffuse, int width, int height)
+        {
+            _imageDiffuse = diffuse;
+            _widthDiffuse = width;
+            _heightDiffuse = height;
+        }
         private Matrix4x4 Normalize()
         {
             Vector3 max = new(
@@ -204,63 +220,25 @@ namespace _3DViewer.Core
             {
                 for (int i = range.Item1; i < range.Item2; i++)
                 {
-                    _image[i * 4 + 0] = BackgroundColor.Blue;
-                    _image[i * 4 + 1] = BackgroundColor.Green;
-                    _image[i * 4 + 2] = BackgroundColor.Red;
-                    _image[i * 4 + 3] = BackgroundColor.Alpha;
-                    _brightness[i] = 0;
+                    _colors[i * 4 + 0] = BackgroundColor.X;
+                    _colors[i * 4 + 1] = BackgroundColor.Y;
+                    _colors[i * 4 + 2] = BackgroundColor.Z;
+                    _colors[i * 4 + 3] = BackgroundColor.W;
+
+                    _brightness[i * 4 + 0] = BackgroundColor.X;
+                    _brightness[i * 4 + 1] = BackgroundColor.Y;
+                    _brightness[i * 4 + 2] = BackgroundColor.Z;
+                    _brightness[i * 4 + 3] = BackgroundColor.W;
+
+
+                    _image[i * 4 + 0] = (byte)(255*BackgroundColor.X);
+                    _image[i * 4 + 1] = (byte)(255 * BackgroundColor.Y);
+                    _image[i * 4 + 2] = (byte)(255 * BackgroundColor.Z);
+                    _image[i * 4 + 3] = (byte)(255 * BackgroundColor.W);
+
                     _zbuffer[i] = double.PositiveInfinity;
                 }
             });
-        }
-        private void DrawLine(Vector3 v0, Vector3 v1, Color color)
-        {
-            float x0 = v0.X;
-            float x1 = v1.X;
-            float y0 = v0.Y;
-            float y1 = v1.Y;
-
-            int xDiff = Math.Abs((int)(x1 - x0));
-            int yDiff = Math.Abs((int)(y1 - y0));
-            int L = xDiff > yDiff ? xDiff : yDiff;
-
-            float dx = (x1 - x0) / L;
-            float dy = (y1 - y0) / L;
-
-            int X1 = Convert.ToInt32(x0);
-            int Y1 = Convert.ToInt32(y0);
-            if (L == 0 && X1 > 0 &&
-                    Y1 > 0 &&
-                    X1 < _width &&
-                    Y1 < _height)
-            {
-
-                int point = ARGB * (Y1 * _width + X1);
-
-                _image[point + 0] = color.Blue;
-                _image[point + 1] = color.Green;
-                _image[point + 2] = color.Red;
-                _image[point + 3] = color.Alpha;
-            }
-
-            for (int i = 0; i < L; i++)
-            {
-                int X = Convert.ToInt32(x0 + dx * i);
-                int Y = Convert.ToInt32(y0 + dy * i);
-
-                if (X > 0 &&
-                    Y > 0 &&
-                    X < _width &&
-                    Y < _height)
-                {
-                    int point = ARGB * (Y * _width + X);
-
-                    _image[point + 0] = color.Blue;
-                    _image[point + 1] = color.Green;
-                    _image[point + 2] = color.Red;
-                    _image[point + 3] = color.Alpha;
-                }
-            }
         }
         private void DrawTriangle(int[] vertices)
         {
@@ -340,11 +318,6 @@ namespace _3DViewer.Core
             int top = Math.Max(0, Convert.ToInt32(Math.Ceiling(a.Y)));
             int bottom = Math.Min(_height, Convert.ToInt32(Math.Ceiling(c.Y)));
 
-            byte currAlpha = AmbientColor.Alpha;
-            byte currRed = AmbientColor.Red;
-            byte currGreen = AmbientColor.Green;
-            byte currBlue = AmbientColor.Blue;
-
             for (int y = top; y < bottom; y++)
             {
                 Vector3 n1 = wna + (wnc - wna) * (y - a.Y) / (c.Y - a.Y);
@@ -380,57 +353,35 @@ namespace _3DViewer.Core
                     {
                         _zbuffer[ind] = p.Z;
 
-                        //**********  NORMAL FOR EACH PIXEL ********//
-
                         normal = n1 + (x - lp.X) * kn;
                         normal = Vector3.Normalize(normal);
-
-                        //******************************************//
-
-                        //************  NO NEED TO REMOVE **********//
 
                         var diffuse = _lightningCounter.CountDiffuse(normal, _camera.LightPosition);
                         var specular = _lightningCounter.CountSpecular(normal, _camera.LightPosition, -_camera.Position);
 
                         Vector3 fragColor = specular + diffuse + ambient;
-                        Vector3 result = LightningCounter.ColorVector3(fragColor);
-
-                        var colorCount = 255 * result;
-
-                        //****************************************//
-
-                        //**********  NO NEED TO REMOVE **********//
-                        var intensivity = LightningCounter.Lambert(normal, _camera.LightPosition);
-                        if (intensivity < 0)
-                        {
-                            intensivity = 0;
-                        }
-                        //****************************************//
-
-                        //--begin lambert--//
-
-
-                         //currAlpha = (byte)(255 - intensivity * _intensivityCoef * 255);
-
-
-                        //--end lambert--//
-
-
-                        //--start phong--//
-
-                        currRed = (byte)colorCount.X;
-                        currGreen = (byte)colorCount.Y;
-                        currBlue = (byte)colorCount.Z;
-
-                        //--end phong--//
+                        Vector3 brightColor = BloomCounter.CountBloom(fragColor);
 
                         int point = ARGB * ind;
-                        Color color = new Color(currAlpha, currRed, currGreen, currBlue);
 
-                        _image[point + 0] = color.Blue;
-                        _image[point + 1] = color.Green;
-                        _image[point + 2] = color.Red;
-                        _image[point + 3] = color.Alpha;
+                        _colors[point + 0] = fragColor.X;
+                        _colors[point + 1] = fragColor.Y;
+                        _colors[point + 2] = fragColor.Z;
+                        _colors[point + 3] = AmbientColor.W;
+
+                        _brightness[point + 0] = brightColor.X;
+                        _brightness[point + 1] = brightColor.Y;
+                        _brightness[point + 2] = brightColor.Z;
+                        _brightness[point + 3] = AmbientColor.W;
+
+                        fragColor = LightningCounter.ColorVector3(fragColor);
+
+                        fragColor *= 255;
+
+                        _image[point + 0] = (byte)fragColor.X;
+                        _image[point + 1] = (byte)fragColor.Y;
+                        _image[point + 2] = (byte)fragColor.Z;
+                        _image[point + 3] = (byte)(AmbientColor.W*255);
                     }
 
                 }
@@ -438,7 +389,6 @@ namespace _3DViewer.Core
         }
         private void TriangleRasterization()
         {
-
             Parallel.ForEach(Partitioner.Create(0, _modelCoordinates.Triangles.Length), range =>
             {
                 for (int j = range.Item1; j < range.Item2; j++)
@@ -446,7 +396,24 @@ namespace _3DViewer.Core
                     DrawTriangle(_modelCoordinates.Triangles[j]);
                 }
             });
-        }
+            //bloom start
 
+            float[] gBl = BloomCounter.GaussianBlur(_brightness, _width, _height);
+            Parallel.ForEach(Partitioner.Create(0, _height), range =>
+            {
+                for (int y = range.Item1; y < range.Item2; y++)
+                {
+                    for (int x = 0; x < _width; x++)
+                    {
+                        Vector4 c = BloomCounter.GetPixelColor(gBl, _width, x, y) + BloomCounter.GetPixelColor(_colors, _width, x, y);
+                        Vector3 a = LightningCounter.ColorVector3(new Vector3(c.X, c.Y, c.Z));
+                        a *= 255;
+                        BloomCounter.SetPixelColor(_image, _width, x, y, new Vector4(a.X, a.Y, a.Z, 255));
+                    }
+                }
+            });
+
+            //bloom end
+        }
     }
 }

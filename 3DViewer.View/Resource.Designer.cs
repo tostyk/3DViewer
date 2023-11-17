@@ -63,9 +63,9 @@ namespace _3DViewer.View {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Byte[].
         /// </summary>
-        public static byte[] beecat {
+        public static byte[] beecat2 {
             get {
-                object obj = ResourceManager.GetObject("beecat", resourceCulture);
+                object obj = ResourceManager.GetObject("beecat2", resourceCulture);
                 return ((byte[])(obj));
             }
         }
@@ -73,9 +73,9 @@ namespace _3DViewer.View {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Byte[].
         /// </summary>
-        public static byte[] cat {
+        public static byte[] cat_bump {
             get {
-                object obj = ResourceManager.GetObject("cat", resourceCulture);
+                object obj = ResourceManager.GetObject("cat_bump", resourceCulture);
                 return ((byte[])(obj));
             }
         }
@@ -83,9 +83,9 @@ namespace _3DViewer.View {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Byte[].
         /// </summary>
-        public static byte[] creature_bird {
+        public static byte[] cat_diffuse {
             get {
-                object obj = ResourceManager.GetObject("creature_bird", resourceCulture);
+                object obj = ResourceManager.GetObject("cat_diffuse", resourceCulture);
                 return ((byte[])(obj));
             }
         }
@@ -93,9 +93,19 @@ namespace _3DViewer.View {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Byte[].
         /// </summary>
-        public static byte[] cube {
+        public static byte[] cat_mtl {
             get {
-                object obj = ResourceManager.GetObject("cube", resourceCulture);
+                object obj = ResourceManager.GetObject("cat_mtl", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Byte[].
+        /// </summary>
+        public static byte[] cat_obj {
+            get {
+                object obj = ResourceManager.GetObject("cat_obj", resourceCulture);
                 return ((byte[])(obj));
             }
         }
@@ -106,66 +116,6 @@ namespace _3DViewer.View {
         public static byte[] denis {
             get {
                 object obj = ResourceManager.GetObject("denis", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Поиск локализованного ресурса типа System.Byte[].
-        /// </summary>
-        public static byte[] dragon {
-            get {
-                object obj = ResourceManager.GetObject("dragon", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Поиск локализованного ресурса типа System.Byte[].
-        /// </summary>
-        public static byte[] mancubus {
-            get {
-                object obj = ResourceManager.GetObject("mancubus", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Поиск локализованного ресурса типа System.Byte[].
-        /// </summary>
-        public static byte[] PinkSoldier {
-            get {
-                object obj = ResourceManager.GetObject("PinkSoldier", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Поиск локализованного ресурса типа System.Byte[].
-        /// </summary>
-        public static byte[] rose {
-            get {
-                object obj = ResourceManager.GetObject("rose", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Поиск локализованного ресурса типа System.Byte[].
-        /// </summary>
-        public static byte[] spaceship {
-            get {
-                object obj = ResourceManager.GetObject("spaceship", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Поиск локализованного ресурса типа System.Byte[].
-        /// </summary>
-        public static byte[] spider {
-            get {
-                object obj = ResourceManager.GetObject("spider", resourceCulture);
                 return ((byte[])(obj));
             }
         }
