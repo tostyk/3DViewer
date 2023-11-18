@@ -19,16 +19,20 @@ namespace _3DViewer.View
 {
     public class MainVM : ObservableObject, INotifyPropertyChanged
     {
+        private string basePath =
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Model");
+
         private Pbgra32Bitmap _pbgra32;
         private WriteableBitmap _bitmap;
-        private WriteableBitmap _diffuseBitmap;
 
+        private readonly ResourcesStreams _resourcesStreams = new(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Model"));
         private readonly ObjVertices _objVertices = new();
+        private readonly MtlInformation _mtlInformation = new MtlInformation();
+
         private readonly BitmapGenerator _bitmapGenerator;
 
         private bool _rotation = false;
         private Point _prevPoint;
-        private byte[] _diffuseData;
 
         private int _width = 2000;
         private int _height = 1000;
@@ -59,46 +63,51 @@ namespace _3DViewer.View
         public ICommand MouseWheelCommand { get; }
         public ICommand KeyDownCommand { get; }
         public ICommand SizeChangedCommand { get; }
-
         public MainVM()
         {
-            var a = AppDomain.CurrentDomain.BaseDirectory;
-            var obj = Resource.shovel_low;
-            var mtl = Resource.cat_mtl;
-            var diffuse = Resource.shovel_diffuse;
-
-            using (MemoryStream stream = new MemoryStream())
+            _objVertices = _resourcesStreams.GetVertices();
+            _mtlInformation = _resourcesStreams.GetMtlInformation(_objVertices);
+            foreach(MtlCharacter mtlCharacter in _mtlInformation.mtlCharacters)
             {
-                stream.Write(obj, 0, obj.Length);
-                _objVertices.ParseObj(stream);
-            }
+                if(mtlCharacter.mapKa != null)
+                {
+                    mtlCharacter.kaImage = ReadMap(
+                        mtlCharacter.mapKa,
+                        out mtlCharacter._widthKa,
+                        out mtlCharacter._heightKa
+                        );
+                }
+                if (mtlCharacter.mapKd != null)
+                {
+                    mtlCharacter.kdImage = ReadMap(
+                        mtlCharacter.mapKd,
+                        out mtlCharacter._widthKd,
+                        out mtlCharacter._heightKd
+                        );
+                }
+                if (mtlCharacter.mapKs != null)
+                {
+                    mtlCharacter.ksImage = ReadMap(
+                        mtlCharacter.mapKs,
+                        out mtlCharacter._widthKs,
+                        out mtlCharacter._heightKs
+                        );
+                }
 
-
-            using (MemoryStream stream = new MemoryStream())
-            {
-                stream.Write(mtl, 0, mtl.Length);
-                _objVertices.ParseMtl(stream);
-            }
-
-            using (MemoryStream stream = new MemoryStream())
-            {
-                stream.Write(diffuse, 0, diffuse.Length);
-                stream.Seek(0, SeekOrigin.Begin);
-
-                BitmapFrame bitmapFrame = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
-
-                _diffuseBitmap = new(new FormatConvertedBitmap(bitmapFrame, PixelFormats.Pbgra32, null, 0));
-
-                _diffuseData = new byte[_diffuseBitmap.PixelWidth * _diffuseBitmap.PixelHeight * 4];
-                _diffuseBitmap.CopyPixels(_diffuseData, _diffuseBitmap.PixelWidth * 4, 0);
+                if (mtlCharacter.norm != null)
+                {
+                    mtlCharacter.normImage = ReadMap(
+                        mtlCharacter.norm,
+                        out mtlCharacter._widthNorm,
+                        out mtlCharacter._heightNorm
+                        );
+                }
             }
 
             Bitmap = new(_width, _height, 96, 96, PixelFormats.Pbgra32, null);
-            _bitmapGenerator = new BitmapGenerator(_objVertices, _width, _height);
-            _bitmapGenerator.SetDiffuseMap(_diffuseData, _diffuseBitmap.PixelWidth, _diffuseBitmap.PixelHeight);
-            _pbgra32 = new Pbgra32Bitmap(Bitmap);
+            _bitmapGenerator = new BitmapGenerator(_objVertices, _mtlInformation, _width, _height);
 
-         //   DrawNewFrame();
+            _pbgra32 = new Pbgra32Bitmap(Bitmap);
 
             MouseDownCommand = new RelayCommand<Point>((point) => MouseDown(point));
             MouseUpCommand = new RelayCommand(MouseUp);
@@ -107,7 +116,35 @@ namespace _3DViewer.View
             SizeChangedCommand = new RelayCommand<Size>((size) => SizeChanged(size));
         }
 
+        public byte[] ReadMap(string relativePath, out int width, out int height)
+        {
+            string mtlPath = Path.Combine(basePath, relativePath);
+            byte[] res = Array.Empty<byte>();
 
+            width = 0;
+            height = 0; 
+
+            if (File.Exists(mtlPath))
+            {
+                using (FileStream stream = File.OpenRead(mtlPath))
+                {
+                    stream.Seek(0, SeekOrigin.Begin);
+                    BitmapFrame bitmapFrame = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                    WriteableBitmap currBtm = new(new FormatConvertedBitmap(bitmapFrame, PixelFormats.Pbgra32, null, 0));
+
+                    width = currBtm.PixelWidth;
+                    height = currBtm.PixelHeight;
+
+                    res = new byte[currBtm.PixelWidth * currBtm.PixelHeight * 4];
+                    currBtm.CopyPixels(res, currBtm.PixelWidth * 4, 0);
+                }
+            }
+            else
+            {
+
+            }
+            return res;
+        }
         private void SizeChanged(Size size)
         {
             _height = Convert.ToInt32(size.Height / size.Width * _width);
@@ -120,8 +157,6 @@ namespace _3DViewer.View
 
             DrawNewFrame();
         }
-        
-
         private void MouseDown(Point point)
         {
             _rotation = !_rotation;
@@ -199,13 +234,13 @@ namespace _3DViewer.View
             _stopwatch.Restart();
             Bitmap.Lock();
             btm = _bitmapGenerator.GenerateImage();
-         // Marshal.Copy(btm, 0, Bitmap.BackBuffer, btm.Length);
-         //   Bitmap.AddDirtyRect(new Int32Rect(0, 0, _width, _height));
+            // Marshal.Copy(btm, 0, Bitmap.BackBuffer, btm.Length);
+            //   Bitmap.AddDirtyRect(new Int32Rect(0, 0, _width, _height));
             Bitmap.WritePixels(new Int32Rect(0, 0, _width, _height), btm, _width * 4, 0);
             Bitmap.Unlock();
 
             FrameRate = 1000 * 10_000 / _stopwatch.ElapsedTicks;
-            if(FrameRate > MaxFrameRate)
+            if (FrameRate > MaxFrameRate)
             {
                 MaxFrameRate = FrameRate;
             }

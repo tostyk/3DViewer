@@ -16,4 +16,10 @@ namespace _3DViewer.Core.obj_parse
         public int textureVertex;
         public int normalVertex;
     }
+    public class TextureRange
+    {
+        public string mtlName = "";
+        public int firstFace = -1;
+        public int lastFace = -1;
+    }
 }

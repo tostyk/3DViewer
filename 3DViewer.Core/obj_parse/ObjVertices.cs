@@ -4,6 +4,7 @@ namespace _3DViewer.Core.obj_parse
 {
     public class ObjVertices
     {
+        public string mtllib = "";
         public Vector4[] Vertices = Array.Empty<Vector4>();
         public Vector3[] TextureVertices = Array.Empty<Vector3>();
         public Vector3[] Normals = Array.Empty<Vector3>();
@@ -11,10 +12,13 @@ namespace _3DViewer.Core.obj_parse
         public Polygon[] Polygons = Array.Empty<Polygon>();
         public Polygon[] Triangles = Array.Empty<Polygon>();
 
+        public TextureRange[] mtlTexturePolygons = Array.Empty<TextureRange>();
+        public TextureRange[] mtlTextureTriangles = Array.Empty<TextureRange>();
+
         //to count normals
         public Vector3[] VerticesNormals = Array.Empty<Vector3>();
 
-        public void ParseObj(MemoryStream stream)
+        public void ParseObj(Stream stream)
         {
             List<Polygon> polygons = new();
             List<Vector4> vertices = new();
@@ -22,6 +26,9 @@ namespace _3DViewer.Core.obj_parse
             List<Vector3> normal = new();
             Dictionary<int, List<int>> vertexNormals = new();
             Dictionary<int, List<int>> textxtureFaces = new();
+
+            List<TextureRange> textures = new();
+            TextureRange? textureRange = null;
 
             List<List<int>> vTrianglses = new();
 
@@ -43,6 +50,24 @@ namespace _3DViewer.Core.obj_parse
 
                 string character = elements.First();
                 elements = elements.Skip(1);
+                if (character == "mtllib")
+                {
+                    mtllib = elements.First();
+                }
+                else
+                if (character == "usemtl")
+                {
+                    if (textureRange != null)
+                    {
+                        textureRange.lastFace = polygons.Count - 1;
+                        textures.Add(textureRange);
+                    }
+                    textureRange = new TextureRange
+                    {
+                        mtlName = elements.Last(),
+                        firstFace = polygons.Count,
+                    };
+                }
                 if (character == "f")
                 {
                     var polygon = new Polygon();
@@ -104,24 +129,24 @@ namespace _3DViewer.Core.obj_parse
 
             Polygons = polygons.ToArray();
 
+            if (textureRange != null)
+            {
+                textureRange.lastFace = polygons.Count - 1;
+                textures.Add(textureRange);
+            }
+
+            mtlTexturePolygons = textures.ToArray();
+
             VerticesNormals = new Vector3[Vertices.Length];
+
 
             foreach (var normals in vertexNormals)
             {
                 Vector3 totalNormal = CountTotalNormal(normals.Value);
                 VerticesNormals[normals.Key] = totalNormal;
             }
-        }
-        public void ParseMtl(MemoryStream stream)
-        {
-            string[] lines;
 
-            using (StreamReader reader = new StreamReader(stream))
-            {
-                reader.BaseStream.Seek(0, SeekOrigin.Begin);
-                var a = reader.ReadToEnd();
-                lines = a.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-            }
+            SeparateTriangles();
         }
         private Vector3 CountTotalNormal(IEnumerable<int> normalsNums)
         {
@@ -144,22 +169,57 @@ namespace _3DViewer.Core.obj_parse
         public void SeparateTriangles()
         {
             List<Polygon> triangles = new List<Polygon>();
+            int startInd = -1;
+            int lastInd = -1;
 
+            int triangleInd = 0;
 
-            foreach (var polygon in Polygons)
+            mtlTextureTriangles = new TextureRange[mtlTexturePolygons.Length];
+
+            for (int j = 0; j < mtlTexturePolygons.Length; j++)
             {
-                for (int first = 0; first + 1 < polygon.FaceVertices.Count; first += 2)
+                TextureRange textureRange = mtlTexturePolygons[j];
+                startInd = triangleInd;
+                for (int i = textureRange.firstFace; i < textureRange.lastFace; i++)
                 {
-                    Polygon triangle = new Polygon();
+                    Polygon polygon = Polygons[i];
 
-                    triangle.FaceVertices.Add(polygon.FaceVertices[first]);
-                    triangle.FaceVertices.Add(polygon.FaceVertices[first + 1]);
-                    triangle.FaceVertices.Add(polygon.FaceVertices[(first + 2) % polygon.FaceVertices.Count]);
-                    triangles.Add(triangle);
+                    for (int first = 0; first + 1 < polygon.FaceVertices.Count; first += 2)
+                    {
+                        Polygon triangle = new Polygon();
+
+                        triangle.FaceVertices.Add(polygon.FaceVertices[first]);
+                        triangle.FaceVertices.Add(polygon.FaceVertices[first + 1]);
+                        triangle.FaceVertices.Add(polygon.FaceVertices[(first + 2) % polygon.FaceVertices.Count]);
+                        triangles.Add(triangle);
+                        triangleInd++;
+                    }
+                    lastInd = triangleInd - 1;
                 }
+
+                mtlTextureTriangles[j] = new TextureRange
+                {
+                    mtlName = textureRange.mtlName,
+                    firstFace = startInd,
+                    lastFace = lastInd,
+                };
             }
+            if (mtlTexturePolygons.Length < 1)
+                foreach (var polygon in Polygons)
+                {
+                    for (int first = 0; first + 1 < polygon.FaceVertices.Count; first += 2)
+                    {
+                        Polygon triangle = new Polygon();
+
+                        triangle.FaceVertices.Add(polygon.FaceVertices[first]);
+                        triangle.FaceVertices.Add(polygon.FaceVertices[first + 1]);
+                        triangle.FaceVertices.Add(polygon.FaceVertices[(first + 2) % polygon.FaceVertices.Count]);
+                        triangles.Add(triangle);
+                    }
+                }
 
             Triangles = triangles.ToArray();
         }
+
     }
 }
