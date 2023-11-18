@@ -181,6 +181,18 @@ namespace _3DViewer.Core
 
             return vector4;
         }
+        public static Vector4 GetPixelColor(byte[] image, int width, int x, int y)
+        {
+            int point = 4 * (x + y * width);
+            Vector4 vector4 = new Vector4(
+                image[point],
+                image[point + 1],
+                image[point + 2],
+                image[point + 3]
+                );
+
+            return vector4;
+        }
         public static void SetPixelColor(float[] image, int width, int x, int y, Vector4 v4)
         {
             int point = 4 * (x + y * width);

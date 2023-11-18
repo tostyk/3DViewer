@@ -13,6 +13,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Runtime.InteropServices;
+using _3DViewer.Core.obj_parse;
 
 namespace _3DViewer.View
 {
@@ -61,9 +62,10 @@ namespace _3DViewer.View
 
         public MainVM()
         {
-            var obj = Resource.cat_obj;
+            var a = AppDomain.CurrentDomain.BaseDirectory;
+            var obj = Resource.shovel_low;
             var mtl = Resource.cat_mtl;
-            var diffuse = Resource.cat_diffuse;
+            var diffuse = Resource.shovel_diffuse;
 
             using (MemoryStream stream = new MemoryStream())
             {

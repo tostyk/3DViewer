@@ -11,11 +11,11 @@ namespace _3DViewer.Core
 
         public Vector3 BloomBrightness = new Vector3 (0.2126f, 0.7152f, 0.0722f);
 
-        public float kA = 0.6f;
-        public float kD = 1.0f;
-        public float kS = 2.2f;
+        public float kA = 0.05f;
+        public float kD = 2.9f;
+        public float kS = 1.15f;
 
-        public float SpecularPower = 20f;
+        public float SpecularPower = 100f;
 
         public static Vector3 ColorVector3(Vector3 color)
         {
@@ -94,7 +94,7 @@ namespace _3DViewer.Core
             return kA * AmbientAlbedo;
         }
 
-        public Vector3 CountDiffuse(Vector3 N, Vector3 L)
+        public Vector3 CountDiffuse(Vector3 N, Vector3 L, Vector3 DiffuseAlbedo)
         {
             N = Vector3.Normalize(N);
             L = Vector3.Normalize(L);

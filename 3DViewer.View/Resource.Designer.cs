@@ -113,9 +113,49 @@ namespace _3DViewer.View {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Byte[].
         /// </summary>
+        public static byte[] den_100 {
+            get {
+                object obj = ResourceManager.GetObject("den_100", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Byte[].
+        /// </summary>
+        public static byte[] den_diffuse {
+            get {
+                object obj = ResourceManager.GetObject("den_diffuse", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Byte[].
+        /// </summary>
         public static byte[] denis {
             get {
                 object obj = ResourceManager.GetObject("denis", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Byte[].
+        /// </summary>
+        public static byte[] shovel_diffuse {
+            get {
+                object obj = ResourceManager.GetObject("shovel_diffuse", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Byte[].
+        /// </summary>
+        public static byte[] shovel_low {
+            get {
+                object obj = ResourceManager.GetObject("shovel_low", resourceCulture);
                 return ((byte[])(obj));
             }
         }

@@ -136,4 +136,16 @@
   <data name="denis" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Resources\rp_dennis_posed_004_30k.OBJ;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="den_100" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\rp_dennis_posed_004_100k.OBJ;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="den_diffuse" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\rp_dennis_posed_004_dif.jpg;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="shovel_diffuse" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\shovel_diffuse.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="shovel_low" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\shovel_low.obj;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
 </root>
