@@ -357,9 +357,8 @@ namespace _3DViewer.Core
 
                         if(mtlCharacter.normImage != null)
                         {
-
-                            int tx = Convert.ToInt32(Math.Clamp(t.X * (mtlCharacter._widthNorm - 1), 0, mtlCharacter._heightNorm - 1));
-                            int ty = Convert.ToInt32(Math.Clamp((1 - t.Y) * (mtlCharacter._widthNorm - 1), 0, mtlCharacter._heightNorm - 1));
+                            int tx = Convert.ToInt32(Math.Clamp(t.X * (mtlCharacter._widthNorm - 1), 0, mtlCharacter._widthNorm - 1));
+                            int ty = Convert.ToInt32(Math.Clamp((1 - t.Y) * (mtlCharacter._heightNorm - 1), 0, mtlCharacter._heightNorm - 1));
 
                             Vector4 normal4 = BloomCounter.GetPixelColor(
                                 mtlCharacter.normImage,
@@ -393,8 +392,8 @@ namespace _3DViewer.Core
                         if(mtlCharacter.ksImage != null)
                         {
 
-                            int tx = Convert.ToInt32(Math.Clamp(t.X * (mtlCharacter._widthKs - 1), 0, mtlCharacter._heightKs - 1));
-                            int ty = Convert.ToInt32(Math.Clamp((1 - t.Y) * (mtlCharacter._widthKs - 1), 0, mtlCharacter._heightKs - 1));
+                            int tx = Convert.ToInt32(Math.Clamp(t.X * (mtlCharacter._widthKs - 1), 0, mtlCharacter._widthKs - 1));
+                            int ty = Convert.ToInt32(Math.Clamp((1 - t.Y) * (mtlCharacter._heightKs - 1), 0, mtlCharacter._heightKs - 1));
 
                             specColor = (BloomCounter.GetPixelColor(
                                 mtlCharacter.ksImage,
@@ -404,17 +403,16 @@ namespace _3DViewer.Core
                         }
                         if (mtlCharacter.kaImage != null)
                         {
-
-                            int tx = Convert.ToInt32(Math.Clamp(t.X * (mtlCharacter._widthKa - 1), 0, mtlCharacter._heightKa - 1));
-                            int ty = Convert.ToInt32(Math.Clamp((1 - t.Y) * (mtlCharacter._widthKa - 1), 0, mtlCharacter._heightKa - 1));
+                            int tx = Convert.ToInt32(Math.Clamp(t.X * (mtlCharacter._widthKa - 1), 0, mtlCharacter._widthKa - 1));
+                            int ty = Convert.ToInt32(Math.Clamp((1 - t.Y) * (mtlCharacter._heightKa - 1), 0, mtlCharacter._heightKa - 1));
 
                             ambientColor = (BloomCounter.GetPixelColor(
                                             mtlCharacter.kaImage,
                                             mtlCharacter._widthKa,
                                             tx,
                                             ty) / 255);
-                            Vector3 ambientAlbedo = new Vector3(ambientColor.X, ambientColor.Y, ambientColor.Z);
-                            ambient = LightningCounter.CountAmbient(ambientAlbedo);
+
+                            ambient = LightningCounter.CountAmbient(new Vector3(ambientColor.X, ambientColor.Y, ambientColor.Z));
                         }
 
 
@@ -466,9 +464,9 @@ namespace _3DViewer.Core
                 });
             }
             //bloom start
+/*
 
-
-            /*float[] gBl = BloomCounter.GaussianBlur(_brightness, _width, _height);
+            float[] gBl = BloomCounter.GaussianBlur(_brightness, _width, _height);
             Parallel.ForEach(Partitioner.Create(0, _height), range =>
             {
                 for (int y = range.Item1; y < range.Item2; y++)
@@ -481,8 +479,8 @@ namespace _3DViewer.Core
                         BloomCounter.SetPixelColor(_image, _width, x, y, new Vector4(a.X, a.Y, a.Z, 255));
                     }
                 }
-            });*/
-
+            });
+*/
 
             //bloom end
         }

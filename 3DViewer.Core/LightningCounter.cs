@@ -7,7 +7,7 @@ namespace _3DViewer.Core
     {
 
         public static readonly float kA = 0.05f;
-        public static readonly float kD = 0.3f;
+        public static readonly float kD = 0.5f;
         public static readonly float kS = 0.15f;
 
         public static Vector3 ColorVector3(Vector3 color)

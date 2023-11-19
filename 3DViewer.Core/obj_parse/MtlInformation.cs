@@ -64,6 +64,9 @@ namespace _3DViewer.Core.obj_parse
                                 case "Ks":
                                     mtlCharacter.Ks = Kx;
                                     break;
+                                case "Ke":
+                                    mtlCharacter.Ke = Kx;
+                                    break;
                             }
                         }
                         else
@@ -79,6 +82,9 @@ namespace _3DViewer.Core.obj_parse
                                     break;
                                 case "map_Ks":
                                     mtlCharacter.mapKs = elements.ElementAt(0);
+                                    break;
+                                case "map_Ke":
+                                    mtlCharacter.mapKe = elements.ElementAt(0);
                                     break;
                             }
                         }
@@ -109,26 +115,31 @@ namespace _3DViewer.Core.obj_parse
         public string? mapKd;
         public string? mapKs;
         public string? mapKa;
+        public string? mapKe;
         public string? norm;
 
         public int _widthKd;
         public int _widthKs;
         public int _widthKa;
+        public int _widthKe;
         public int _widthNorm;
 
         public int _heightKd;
         public int _heightKs;
         public int _heightKa;
+        public int _heightKe;
         public int _heightNorm;
 
         public byte[]? kdImage;
         public byte[]? ksImage;
         public byte[]? kaImage;
+        public byte[]? keImage;
         public byte[]? normImage;
 
         public Vector3 Ka = new(1f, 1f, 1f);
         public Vector3 Kd = new(1f, 1f, 1f);
         public Vector3 Ks = new(1f, 1f, 1f);
+        public Vector3 Ke = new(1f, 1f, 1f);
         public float Ns;
     }
 }
