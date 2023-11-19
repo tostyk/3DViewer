@@ -180,7 +180,7 @@ namespace _3DViewer.Core.obj_parse
             {
                 TextureRange textureRange = mtlTexturePolygons[j];
                 startInd = triangleInd;
-                for (int i = textureRange.firstFace; i < textureRange.lastFace; i++)
+                for (int i = textureRange.firstFace; i <= textureRange.lastFace; i++)
                 {
                     Polygon polygon = Polygons[i];
 

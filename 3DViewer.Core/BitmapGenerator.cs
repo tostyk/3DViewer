@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Drawing;
 using System.Numerics;
+using System.Text;
 using _3DViewer.Core.obj_parse;
 
 namespace _3DViewer.Core
@@ -312,7 +313,6 @@ namespace _3DViewer.Core
                     : (tb / b.Z + (tc / c.Z - tb / b.Z) * kbcY) / (1 / b.Z + (1 / c.Z - 1 / b.Z) * kbcY);
 
 
-
                 n1 = Vector3.Normalize(n1);
                 n2 = Vector3.Normalize(n2);
 
@@ -388,6 +388,7 @@ namespace _3DViewer.Core
                                 mtlCharacter._widthKd,
                                 tx,
                                 ty) / 255);
+
                         }
                         if(mtlCharacter.ksImage != null)
                         {
@@ -400,6 +401,7 @@ namespace _3DViewer.Core
                                 mtlCharacter._widthKs,
                                 tx,
                                 ty) / 255);
+
                         }
                         if (mtlCharacter.kaImage != null)
                         {
@@ -457,7 +459,7 @@ namespace _3DViewer.Core
                 MtlCharacter currMtlCharacter = _mtlInformation.mtlCharacters.Where(x => x.name == _modelCoordinates.mtlTextureTriangles[i].mtlName).First();
                 Parallel.ForEach(Partitioner.Create(_modelCoordinates.mtlTextureTriangles[i].firstFace, _modelCoordinates.mtlTextureTriangles[i].lastFace), range =>
                 {
-                    for (int j = range.Item1; j < range.Item2; j++)
+                    for (int j = range.Item1; j <= range.Item2; j++)
                     {
                         DrawTriangle(_modelCoordinates.Triangles[j], currMtlCharacter);
                     }
