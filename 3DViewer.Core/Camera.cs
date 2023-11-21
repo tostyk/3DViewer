@@ -34,7 +34,7 @@ namespace _3DViewer.Core
             Position = new(0, 0, 0);
             ViewerPosition = Position;
 
-            LightPosition = new (0, 1, 1);
+            LightPosition = new (3, 1, 1);
 
             Pitch = 0f;
             Yaw = 0f;

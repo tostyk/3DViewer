@@ -3,7 +3,7 @@ using System.Runtime.Intrinsics;
 
 namespace _3DViewer.Core
 {
-    public static class LightningCounter
+    public static class LightCounter
     {
 
         public static readonly float kA = 0.05f;

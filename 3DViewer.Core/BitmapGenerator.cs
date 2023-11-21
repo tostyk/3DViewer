@@ -195,6 +195,21 @@ namespace _3DViewer.Core
             };
             return matrix;
         }
+        private Vector3 CountTexture(int width, int height, float x, float y, byte[] image)
+        {
+            int tx = Convert.ToInt32(Math.Clamp(x * (width - 1), 0, width - 1));
+            int ty = Convert.ToInt32(Math.Clamp((1 - y) * (height - 1), 0, height - 1));
+
+            Vector4 temp = (BloomCounter.GetPixelColor(
+                image,
+                width,
+                tx,
+                ty) / 255);
+
+            Vector3 result = new(temp.X, temp.Y, temp.Z);
+
+            return result;
+        }
         private void ClearImage()
         {
             Parallel.ForEach(Partitioner.Create(0, _image.Length / 4), range =>
@@ -258,7 +273,7 @@ namespace _3DViewer.Core
             if (Vector3.Dot(Vector3.Normalize(Vector3.Cross(a - b, c - b)), _camera.ViewerPosition) < 0) return;
 
 
-            var ambient = LightningCounter.CountAmbient(AmbientColor);
+            var ambient = LightCounter.CountAmbient(AmbientColor);
 
             Vector3 wna = _modelCoordinates.VerticesNormals[vertices[0]];
             Vector3 wnb = _modelCoordinates.VerticesNormals[vertices[1]];
@@ -334,112 +349,71 @@ namespace _3DViewer.Core
 
                 for (int x = left; x < right; x++)
                 {
-                    int ind = y * _width + x;
+                    int index = y * _width + x;
 
                     Vector3 p = lp + (x - lp.X) * kp;
 
-                    if (_zbuffer[ind] > p.Z)
+                    if (_zbuffer[index] > p.Z)
                     {
-                        _zbuffer[ind] = p.Z;
-                        int point = ARGB * ind;
+                        _zbuffer[index] = p.Z;
+                        int point = ARGB * index;
 
-                        var ambientColor = new Vector4(mtlCharacter.Ka, 1.0f);
-                        var diffColor = new Vector4(mtlCharacter.Kd, 1.0f);
-                        var specColor = new Vector4(mtlCharacter.Ks, 1.0f);
+                        Vector3 diffuseAlbedo = mtlCharacter.Kd;
+                        Vector3 specularAlbedo = mtlCharacter.Ks;
 
-                        Vector3 normal = n1 + (x - lp.X) * kn;
-                        normal = Vector3.Normalize(normal);
+                        Vector3 normal = Vector3.Normalize(n1 + (x - lp.X) * kn);
 
                         float kt = (x - lp.X) / (rp.X - lp.X);
 
                         Vector3 t = ((1 - kt) * t1 / lp.Z + kt * t2 / rp.Z) / ((1 - kt) * 1 / lp.Z + kt / rp.Z);
 
 
-                        if(mtlCharacter.normImage != null)
+                        if (mtlCharacter.normImage != null)
                         {
-                            int tx = Convert.ToInt32(Math.Clamp(t.X * (mtlCharacter._widthNorm - 1), 0, mtlCharacter._widthNorm - 1));
-                            int ty = Convert.ToInt32(Math.Clamp((1 - t.Y) * (mtlCharacter._heightNorm - 1), 0, mtlCharacter._heightNorm - 1));
-
-                            Vector4 normal4 = BloomCounter.GetPixelColor(
-                                mtlCharacter.normImage,
-                                mtlCharacter._widthNorm,
-                                tx,
-                                ty);
+                            normal = CountTexture(mtlCharacter._widthNorm, mtlCharacter._heightNorm, t.X, t.Y, mtlCharacter.normImage);
 
                             normal = new Vector3(
-                                normal4.Z,
-                                normal4.Y,
-                                normal4.X
+                                normal.Z,
+                                normal.Y,
+                                normal.X
                                 );
 
-                            normal = normal * 2 / 255 - Vector3.One;
+                            normal = normal * 2 - Vector3.One;
 
                             normal = Vector3.Normalize(normal);
                         }
-
                         if (mtlCharacter.kdImage != null)
                         {
-
-                            int tx = Convert.ToInt32(Math.Clamp(t.X * (mtlCharacter._widthKd - 1), 0, mtlCharacter._widthKd - 1));
-                            int ty = Convert.ToInt32(Math.Clamp((1 - t.Y) * (mtlCharacter._heightKd - 1), 0, mtlCharacter._heightKd - 1));
-
-                            diffColor = (BloomCounter.GetPixelColor(
-                                mtlCharacter.kdImage,
-                                mtlCharacter._widthKd,
-                                tx,
-                                ty) / 255);
-
+                            diffuseAlbedo = CountTexture(mtlCharacter._widthKd, mtlCharacter._heightKd, t.X, t.Y, mtlCharacter.kdImage);
                         }
-                        if(mtlCharacter.ksImage != null)
+                        if (mtlCharacter.ksImage != null)
                         {
-
-                            int tx = Convert.ToInt32(Math.Clamp(t.X * (mtlCharacter._widthKs - 1), 0, mtlCharacter._widthKs - 1));
-                            int ty = Convert.ToInt32(Math.Clamp((1 - t.Y) * (mtlCharacter._heightKs - 1), 0, mtlCharacter._heightKs - 1));
-
-                            specColor = (BloomCounter.GetPixelColor(
-                                mtlCharacter.ksImage,
-                                mtlCharacter._widthKs,
-                                tx,
-                                ty) / 255);
-
+                            specularAlbedo = CountTexture(mtlCharacter._widthKs, mtlCharacter._heightKs, t.X, t.Y, mtlCharacter.ksImage);
                         }
                         if (mtlCharacter.kaImage != null)
                         {
-                            int tx = Convert.ToInt32(Math.Clamp(t.X * (mtlCharacter._widthKa - 1), 0, mtlCharacter._widthKa - 1));
-                            int ty = Convert.ToInt32(Math.Clamp((1 - t.Y) * (mtlCharacter._heightKa - 1), 0, mtlCharacter._heightKa - 1));
-
-                            ambientColor = (BloomCounter.GetPixelColor(
-                                            mtlCharacter.kaImage,
-                                            mtlCharacter._widthKa,
-                                            tx,
-                                            ty) / 255);
-
-                            ambient = LightningCounter.CountAmbient(new Vector3(ambientColor.X, ambientColor.Y, ambientColor.Z));
+                            ambient = LightCounter.CountAmbient(CountTexture(mtlCharacter._widthKa, mtlCharacter._heightKa, t.X, t.Y, mtlCharacter.kaImage));
                         }
 
-
-                        Vector3 diffuseAlbedo = new Vector3(diffColor.X, diffColor.Y, diffColor.Z);
-                        Vector3 speculatAlbedo = new Vector3(specColor.X, specColor.Y, specColor.Z);
-
-                        var diffuse = LightningCounter.CountDiffuse(normal, _camera.LightPosition, diffuseAlbedo);
-                        var specular = LightningCounter.CountSpecular(normal, _camera.LightPosition, -_camera.Position,
-                            speculatAlbedo, mtlCharacter.Ns > 0 ? mtlCharacter.Ns : 10f);
+                        var diffuse = LightCounter.CountDiffuse(normal, _camera.LightPosition, diffuseAlbedo);
+                        var specular = LightCounter.CountSpecular(normal, _camera.LightPosition, -_camera.Position,
+                            specularAlbedo, mtlCharacter.Ns > 0 ? mtlCharacter.Ns : 10f);
 
                         Vector3 fragColor = diffuse + ambient + specular;
                         Vector3 brightColor = BloomCounter.CountBloom(fragColor);
-
 
                         _colors[point + 0] = fragColor.X;
                         _colors[point + 1] = fragColor.Y;
                         _colors[point + 2] = fragColor.Z;
                         _colors[point + 3] = 1f;
 
-                        _brightness[point + 0] = brightColor.X;
+                        /*_brightness[point + 0] = brightColor.X;
                         _brightness[point + 1] = brightColor.Y;
                         _brightness[point + 2] = brightColor.Z;
-                        _brightness[point + 3] = 1f;
+                        _brightness[point + 3] = 1f;*/
 
-                        fragColor = LightningCounter.ColorVector3(fragColor);
+
+                        fragColor = LightCounter.ColorVector3(fragColor);
 
                         fragColor *= 255;
 
@@ -466,8 +440,8 @@ namespace _3DViewer.Core
                 });
             }
             //bloom start
-/*
 
+/*
             float[] gBl = BloomCounter.GaussianBlur(_brightness, _width, _height);
             Parallel.ForEach(Partitioner.Create(0, _height), range =>
             {
@@ -481,8 +455,8 @@ namespace _3DViewer.Core
                         BloomCounter.SetPixelColor(_image, _width, x, y, new Vector4(a.X, a.Y, a.Z, 255));
                     }
                 }
-            });
-*/
+            });*/
+
 
             //bloom end
         }
