@@ -9,8 +9,8 @@ namespace _3DViewer.Core
         private static double[] coeffsY = { 0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216 };
         private static double[] coeffsX = { 0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216 };
 
-        public static int extX = 4;
-        public static int extY = 4;
+        public static int extX = 10;
+        public static int extY = 10;
 
         public static readonly Vector3 BloomBrightness = new Vector3(0.2126f, 0.7152f, 0.0722f);
 
@@ -29,6 +29,83 @@ namespace _3DViewer.Core
         {
             float[] res = new float[width * height * 4];
             float[] newImage = ExtendImage(image, width, height, extX, extY);
+            int newWidth = width + 2 * extX;
+
+            Parallel.ForEach(Partitioner.Create(0, height), range =>
+            {
+                for (int y = range.Item1; y < range.Item2; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        int newX = x + extX;
+                        int newY = y + extY;
+
+                        Vector4 curSum = GetPixelColor(newImage, newWidth, newX, newY);
+
+                        curSum *= (float)coeffsX[0];
+
+                        for (int i = 1; i <= extX; i++)
+                        {
+                            Vector4 col1 = GetPixelColor(newImage, newWidth, newX - i, newY) * (float)coeffsX[i];
+                            Vector4 col2 = GetPixelColor(newImage, newWidth, newX + i, newY) * (float)coeffsX[i];
+
+                            curSum += col1;
+                            curSum += col2;
+                        }
+                        SetPixelColor(res, width, x, y, curSum);
+                        res[(y * width + x) * 4 + 3] = 1f;
+                    }
+                }
+            });
+
+            Parallel.ForEach(Partitioner.Create(0, height), range =>
+            {
+                for (int y = range.Item1; y < range.Item2; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        int newX = x + extX;
+                        int newY = y + extY;
+
+                        SetPixelColor(newImage, newWidth, newX, newY, GetPixelColor(res, width, x, y));
+                    }
+                }
+            });
+
+            Parallel.ForEach(Partitioner.Create(0, height), range =>
+            {
+                for (int y = range.Item1; y < range.Item2; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        int newX = x + extX;
+                        int newY = y + extY;
+
+                        Vector4 curSum = GetPixelColor(newImage, newWidth, newX, newY);
+
+                        curSum *= (float)coeffsY[0];
+
+                        for (int i = 1; i <= extY; i++)
+                        {
+                            Vector4 col1 = GetPixelColor(newImage, newWidth, newX, newY - i) * (float)coeffsY[i];
+                            Vector4 col2 = GetPixelColor(newImage, newWidth, newX, newY + i) * (float)coeffsY[i];
+
+                            curSum += col1;
+                            curSum += col2;
+                        }
+
+                        SetPixelColor(res, width, x, y, curSum);
+
+                        res[(y * width + x) * 4 + 3] = 1f;
+                    }
+                }
+            });
+            return res;
+        }
+        public static byte[] GaussianBlur(byte[] image, int width, int height)
+        {
+            byte[] res = new byte[width * height * 4];
+            byte[] newImage = ExtendImage(image, width, height, extX, extY);
             int newWidth = width + 2 * extX;
 
             Parallel.ForEach(Partitioner.Create(0, height), range =>
@@ -122,9 +199,29 @@ namespace _3DViewer.Core
             FillWithLast(newImage, image, width, height, extX, extY);
             return newImage;
         }
+        private static byte[] ExtendImage(byte[] image, int width, int height, int extX, int extY)
+        {
+            byte[] newImage = new byte[4 * (width + 2 * extX) * (height + 2 * extY)];
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    int oldPoint = 4 * (y * width + x);
+                    int newPoint = 4 * ((y + extY) * (width + 2 * extX) + (x + extX));
+
+                    newImage[newPoint] = image[oldPoint];
+                    newImage[newPoint + 1] = image[oldPoint + 1];
+                    newImage[newPoint + 2] = image[oldPoint + 2];
+                    newImage[newPoint + 3] = image[oldPoint + 3];
+                }
+            }
+            FillWithLast(newImage, image, width, height, extX, extY);
+            return newImage;
+        }
         public static void CountGaussian()
         {
-            /*double sqrSX = CountSqrOnExt(extX);
+            double sqrSX = CountSqrOnExt(extX);
             double sqrSY = CountSqrOnExt(extY);
 
             coeffsX = new double[extX + 1];
@@ -134,7 +231,7 @@ namespace _3DViewer.Core
             double[] cY = CountSigmaPercent(sqrSY);
 
             Array.Copy(cX, coeffsX, coeffsX.Length > cX.Length ? cX.Length : coeffsX.Length);
-            Array.Copy(cY, coeffsY, coeffsY.Length > cY.Length ? cY.Length : coeffsY.Length);*/
+            Array.Copy(cY, coeffsY, coeffsY.Length > cY.Length ? cY.Length : coeffsY.Length);
         }
 
         private static double[] CountSigmaPercent(double sqrS)
@@ -263,7 +360,64 @@ namespace _3DViewer.Core
                 }
             }
         }
+        private static void FillWithLast(byte[] newImage, byte[] image, int width, int height, int extX, int extY)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < extX; x++)
+                {
+                    int oldPoint1 = 4 * (y * width);
+                    int oldPoint2 = 4 * (y * width + width - 1);
+                    int newPoint1 = 4 * ((y + extY) * (width + 2 * extX) + (x));
+                    int newPoint2 = 4 * ((y + extY) * (width + 2 * extX) + (x + width + extX));
+
+                    CopyColor(newImage, image, newPoint1, oldPoint1);
+                    CopyColor(newImage, image, newPoint2, oldPoint2);
+                }
+            }
+            for (int y = 0; y < extY; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    int oldPoint1 = 4 * x;
+                    int oldPoint2 = 4 * ((height - 1) * width + x);
+                    int newPoint1 = 4 * ((y) * (width + 2 * extX) + (x + extX));
+                    int newPoint2 = 4 * ((y + height + extY) * (width + 2 * extX) + (x + extX));
+
+                    CopyColor(newImage, image, newPoint1, oldPoint1);
+                    CopyColor(newImage, image, newPoint2, oldPoint2);
+                }
+            }
+
+            for (int y = 0; y < extY; y++)
+            {
+                int oldPoint1 = 0;
+                int oldPoint2 = 4 * (width - 1);
+                int oldPoint3 = 4 * ((height - 1) * width);
+                int oldPoint4 = 4 * ((height - 1) * width + width - 1);
+
+                for (int x = 0; x < extX; x++)
+                {
+                    int newPoint1 = 4 * (y * (width + 2 * extX) + x);
+                    int newPoint2 = 4 * (y * (width + 2 * extX) + (x + width + extX));
+                    int newPoint3 = 4 * ((y + extY + height) * (width + 2 * extX) + x);
+                    int newPoint4 = 4 * ((y + extY + height) * (width + 2 * extX) + (x + width + extX));
+
+                    CopyColor(newImage, image, newPoint1, oldPoint1);
+                    CopyColor(newImage, image, newPoint2, oldPoint2);
+                    CopyColor(newImage, image, newPoint3, oldPoint3);
+                    CopyColor(newImage, image, newPoint4, oldPoint4);
+                }
+            }
+        }
         private static void CopyColor(float[] newImage, float[] oldImage, int newPoint, int oldPoint)
+        {
+            newImage[newPoint] = oldImage[oldPoint];
+            newImage[newPoint + 1] = oldImage[oldPoint + 1];
+            newImage[newPoint + 2] = oldImage[oldPoint + 2];
+            newImage[newPoint + 3] = oldImage[oldPoint + 3];
+        }
+        private static void CopyColor(byte[] newImage, byte[] oldImage, int newPoint, int oldPoint)
         {
             newImage[newPoint] = oldImage[oldPoint];
             newImage[newPoint + 1] = oldImage[oldPoint + 1];

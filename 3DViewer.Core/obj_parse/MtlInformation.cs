@@ -136,10 +136,10 @@ namespace _3DViewer.Core.obj_parse
         public byte[]? keImage;
         public byte[]? normImage;
 
-        public Vector3 Ka = new(1f, 1f, 1f);
-        public Vector3 Kd = new(1f, 1f, 1f);
+        public Vector3 Ka = new(0f, 0f, 0f);
+        public Vector3 Kd = new(0f, 0f, 0f);
         public Vector3 Ks = new(1f, 1f, 1f);
-        public Vector3 Ke = new(1f, 1f, 1f);
+        public Vector3 Ke = new(0f, 0f, 0f);
         public float Ns;
     }
 }

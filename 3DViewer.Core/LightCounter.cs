@@ -6,9 +6,9 @@ namespace _3DViewer.Core
     public static class LightCounter
     {
 
-        public static readonly float kA = 0.05f;
-        public static readonly float kD = 0.5f;
-        public static readonly float kS = 0.15f;
+        public static readonly float kA = 0.10f;
+        public static readonly float kD = 0.70f;
+        public static readonly float kS = 0.20f;
 
         public static Vector3 ColorVector3(Vector3 color)
         {

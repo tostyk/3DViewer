@@ -134,10 +134,11 @@ namespace _3DViewer.Core
             {
                 for (int i = range.Item1; i < range.Item2; i++)
                 {
+                    _worldCoordinates[i] = Vector4.Transform(_modelCoordinates.Vertices[i], currModel *
+                currView);
                     _windowCoordinates[i] = Vector4.Transform(_modelCoordinates.Vertices[i], modelViewProjectionMatrix);
 
                     float w = 1 / _windowCoordinates[i].W;
-                    _worldCoordinates[i] = Vector4.Transform(_modelCoordinates.Vertices[i], currModel);
 
                     _windowCoordinates[i] *= w;
                     _windowCoordinates[i] = Vector4.Transform(_windowCoordinates[i], currViewport);
@@ -240,15 +241,15 @@ namespace _3DViewer.Core
         {
             int[] vertices = new int[3];
             int[] textVertices = new int[3];
+            int[] normals = new int[3];
+
 
             for (int i = 0; i < 3; i++)
             {
                 vertices[i] = triangle.FaceVertices[i].vertex;
                 textVertices[i] = triangle.FaceVertices[i].textureVertex;
+                normals[i] = triangle.FaceVertices[i].normalVertex;
             }
-            Vector3 ta = _modelCoordinates.TextureVertices[textVertices[0]];
-            Vector3 tb = _modelCoordinates.TextureVertices[textVertices[1]];
-            Vector3 tc = _modelCoordinates.TextureVertices[textVertices[2]];
 
             Vector3 a = new Vector3
             {
@@ -270,39 +271,49 @@ namespace _3DViewer.Core
                 Z = _windowCoordinates[vertices[2]].Z
             };
 
+            Vector3 wna = _modelCoordinates.Normals[normals[0]];
+            Vector3 wnb = _modelCoordinates.Normals[normals[1]];
+            Vector3 wnc = _modelCoordinates.Normals[normals[2]];
+
+            float azw = 1 / _worldCoordinates[vertices[0]].Z;
+            float bzw = 1 / _worldCoordinates[vertices[1]].Z;
+            float czw = 1 / _worldCoordinates[vertices[2]].Z;
+
+            Vector3 ta = _modelCoordinates.TextureVertices[textVertices[0]];
+            Vector3 tb = _modelCoordinates.TextureVertices[textVertices[1]];
+            Vector3 tc = _modelCoordinates.TextureVertices[textVertices[2]];
+
+            ta *= azw;
+            tb *= bzw;
+            tc *= czw;
+
             if (Vector3.Dot(Vector3.Normalize(Vector3.Cross(a - b, c - b)), _camera.ViewerPosition) < 0) return;
 
-
             var ambient = LightCounter.CountAmbient(AmbientColor);
-
-            Vector3 wna = _modelCoordinates.VerticesNormals[vertices[0]];
-            Vector3 wnb = _modelCoordinates.VerticesNormals[vertices[1]];
-            Vector3 wnc = _modelCoordinates.VerticesNormals[vertices[2]];
 
             if (a.Y > b.Y)
             {
                 (a, b) = (b, a);
                 (ta, tb) = (tb, ta);
                 (wna, wnb) = (wnb, wna);
+                (azw, bzw) = (bzw, azw);
             };
             if (a.Y > c.Y)
             {
                 (a, c) = (c, a);
                 (ta, tc) = (tc, ta);
                 (wna, wnc) = (wnc, wna);
+                (azw, czw) = (czw, azw);
             }
             if (b.Y > c.Y)
             {
                 (b, c) = (c, b);
                 (tb, tc) = (tc, tb);
                 (wnc, wnb) = (wnb, wnc);
+                (bzw, czw) = (czw, bzw);
             };
 
             if (a.Y == c.Y) return;
-
-            Vector3 kp1 = (c - a) / (c.Y - a.Y);
-            Vector3 kp2 = (b - a) / (b.Y - a.Y);
-            Vector3 kp3 = (c - b) / (c.Y - b.Y);
 
             int top = Math.Max(0, Convert.ToInt32(Math.Ceiling(a.Y)));
             int bottom = Math.Min(_height, Convert.ToInt32(Math.Ceiling(c.Y)));
@@ -313,45 +324,50 @@ namespace _3DViewer.Core
                 float kabY = (y - a.Y) / (b.Y - a.Y);
                 float kbcY = (y - b.Y) / (c.Y - b.Y);
 
+
+                float tw1 = azw + (czw - azw) * kacY;
+                float tw2 = y < b.Y ?
+                            azw + (bzw - azw) * kabY :
+                            bzw + (czw - bzw) * kbcY;
+
+                Vector3 t1 = (ta + (tc - ta) * kacY) / (azw + (czw - azw) * kacY);
+                Vector3 t2 = y < b.Y ?
+                            (ta + (tb - ta) * kabY) / (azw + (bzw - azw) * kabY) :
+                            (tb + (tc - tb) * kbcY) / (bzw + (czw - bzw) * kbcY);
+
+                t1 *= tw1;
+                t2 *= tw2;
+
                 Vector3 n1 = wna + (wnc - wna) * kacY;
 
                 Vector3 n2 = y < b.Y ?
-
                     wna + (wnb - wna) * kabY
                     : wnb + (wnc - wnb) * kbcY;
-
-
-                Vector3 t1 = (ta / a.Z + (tc / c.Z - ta / a.Z) * kacY) / (1 / a.Z + (1 / c.Z - 1 / a.Z) * kacY);
-
-                Vector3 t2 = y < b.Y ?
-                     (ta / a.Z + (tb / b.Z - ta / a.Z) * kabY) / (1 / a.Z + (1 / b.Z - 1 / a.Z) * kabY)
-                    : (tb / b.Z + (tc / c.Z - tb / b.Z) * kbcY) / (1 / b.Z + (1 / c.Z - 1 / b.Z) * kbcY);
-
 
                 n1 = Vector3.Normalize(n1);
                 n2 = Vector3.Normalize(n2);
 
-                Vector3 lp = a + (y - a.Y) * kp1;
-                Vector3 rp = y < b.Y ? a + (y - a.Y) * kp2 : b + (y - b.Y) * kp3;
+                Vector3 lp = a + (c - a) * kacY;
+                Vector3 rp = y < b.Y ? a + (b - a) * kabY : b + (c - b) * kbcY;
 
                 if (lp.X > rp.X)
                 {
                     (lp, rp) = (rp, lp);
                     (n1, n2) = (n2, n1);
+                    (tw1, tw2) = (tw2, tw1);
                     (t1, t2) = (t2, t1);
                 }
 
                 int left = Math.Max(0, Convert.ToInt32(Math.Ceiling(lp.X)));
                 int right = Math.Min(_width, Convert.ToInt32(Math.Ceiling(rp.X)));
 
-                Vector3 kp = (rp - lp) / (rp.X - lp.X);
-                Vector3 kn = (n2 - n1) / (rp.X - lp.X);
-
                 for (int x = left; x < right; x++)
                 {
+                    float k = (x - lp.X) / (rp.X - lp.X);
                     int index = y * _width + x;
 
-                    Vector3 p = lp + (x - lp.X) * kp;
+                    Vector3 p = lp + (rp - lp) * k;
+                    Vector3 t = (t1 + (t2 - t1) * k) / (tw1 + (tw2 - tw1) * k);
 
                     if (_zbuffer[index] > p.Z)
                     {
@@ -360,12 +376,9 @@ namespace _3DViewer.Core
 
                         Vector3 diffuseAlbedo = mtlCharacter.Kd;
                         Vector3 specularAlbedo = mtlCharacter.Ks;
+                        Vector3 emission = mtlCharacter.Ke;
 
-                        Vector3 normal = Vector3.Normalize(n1 + (x - lp.X) * kn);
-
-                        float kt = (x - lp.X) / (rp.X - lp.X);
-
-                        Vector3 t = ((1 - kt) * t1 / lp.Z + kt * t2 / rp.Z) / ((1 - kt) * 1 / lp.Z + kt / rp.Z);
+                        Vector3 normal = Vector3.Normalize(n1 + (n2 - n1) * k);
 
 
                         if (mtlCharacter.normImage != null)
@@ -394,24 +407,26 @@ namespace _3DViewer.Core
                         {
                             ambient = LightCounter.CountAmbient(CountTexture(mtlCharacter._widthKa, mtlCharacter._heightKa, t.X, t.Y, mtlCharacter.kaImage));
                         }
+                        if (mtlCharacter.keImage != null)
+                        {
+                            emission = CountTexture(mtlCharacter._widthKe, mtlCharacter._heightKe, t.X, t.Y, mtlCharacter.keImage);
+                        }
 
                         var diffuse = LightCounter.CountDiffuse(normal, _camera.LightPosition, diffuseAlbedo);
                         var specular = LightCounter.CountSpecular(normal, _camera.LightPosition, -_camera.Position,
                             specularAlbedo, mtlCharacter.Ns > 0 ? mtlCharacter.Ns : 10f);
 
-                        Vector3 fragColor = diffuse + ambient + specular;
-                        Vector3 brightColor = BloomCounter.CountBloom(fragColor);
+                        Vector3 fragColor = diffuse + ambient + specular + emission;
+
+                        _brightness[point + 0] = emission.X;
+                        _brightness[point + 1] = emission.Y;
+                        _brightness[point + 2] = emission.Z;
+                        _brightness[point + 3] = 1f;
 
                         _colors[point + 0] = fragColor.X;
                         _colors[point + 1] = fragColor.Y;
                         _colors[point + 2] = fragColor.Z;
                         _colors[point + 3] = 1f;
-
-                        /*_brightness[point + 0] = brightColor.X;
-                        _brightness[point + 1] = brightColor.Y;
-                        _brightness[point + 2] = brightColor.Z;
-                        _brightness[point + 3] = 1f;*/
-
 
                         fragColor = LightCounter.ColorVector3(fragColor);
 
@@ -426,6 +441,7 @@ namespace _3DViewer.Core
                 }
             }
         }
+
         private void TriangleRasterization()
         {
             for (int i = 0; i < _modelCoordinates.mtlTextureTriangles.Length; i++)
@@ -441,7 +457,7 @@ namespace _3DViewer.Core
             }
             //bloom start
 
-/*
+
             float[] gBl = BloomCounter.GaussianBlur(_brightness, _width, _height);
             Parallel.ForEach(Partitioner.Create(0, _height), range =>
             {
@@ -450,12 +466,12 @@ namespace _3DViewer.Core
                     for (int x = 0; x < _width; x++)
                     {
                         Vector4 c = BloomCounter.GetPixelColor(gBl, _width, x, y) + BloomCounter.GetPixelColor(_colors, _width, x, y);
-                        Vector3 a = LightningCounter.ColorVector3(new Vector3(c.X, c.Y, c.Z));
+                        Vector3 a = LightCounter.ColorVector3(new Vector3(c.X, c.Y, c.Z));
                         a *= 255;
                         BloomCounter.SetPixelColor(_image, _width, x, y, new Vector4(a.X, a.Y, a.Z, 255));
                     }
                 }
-            });*/
+            });
 
 
             //bloom end

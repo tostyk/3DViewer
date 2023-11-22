@@ -34,7 +34,7 @@ namespace _3DViewer.View
         private bool _rotation = false;
         private Point _prevPoint;
 
-        private int _width = 2000;
+        private int _width = 1700;
         private int _height = 1000;
         private float sensitivity = 0.08f;
         byte[] btm;
@@ -93,7 +93,16 @@ namespace _3DViewer.View
                         out mtlCharacter._heightKs
                         );
                 }
+                if (mtlCharacter.mapKe != null)
+                {
+                    mtlCharacter.keImage = ReadMap(
+                        mtlCharacter.mapKe,
+                        out mtlCharacter._widthKe,
+                        out mtlCharacter._heightKe
+                        );
 
+                    //mtlCharacter.keImage = BloomCounter.GaussianBlur(mtlCharacter.keImage, mtlCharacter._widthKe, mtlCharacter._heightKe);
+                }
                 if (mtlCharacter.norm != null)
                 {
                     mtlCharacter.normImage = ReadMap(
@@ -138,10 +147,6 @@ namespace _3DViewer.View
                     res = new byte[currBtm.PixelWidth * currBtm.PixelHeight * 4];
                     currBtm.CopyPixels(res, currBtm.PixelWidth * 4, 0);
                 }
-            }
-            else
-            {
-
             }
             return res;
         }
