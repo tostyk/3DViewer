@@ -457,7 +457,7 @@ namespace _3DViewer.Core
             }
             //bloom start
 
-
+/*
             float[] gBl = BloomCounter.GaussianBlur(_brightness, _width, _height);
             Parallel.ForEach(Partitioner.Create(0, _height), range =>
             {
@@ -471,7 +471,7 @@ namespace _3DViewer.Core
                         BloomCounter.SetPixelColor(_image, _width, x, y, new Vector4(a.X, a.Y, a.Z, 255));
                     }
                 }
-            });
+            });*/
 
 
             //bloom end

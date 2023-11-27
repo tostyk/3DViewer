@@ -14,11 +14,16 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Runtime.InteropServices;
 using _3DViewer.Core.obj_parse;
+using _3DViewer.Joystick;
+using System.IO.Ports;
 
 namespace _3DViewer.View
 {
     public class MainVM : ObservableObject, INotifyPropertyChanged
     {
+        private COMmunicationPort? _port;
+        private State? _newState;
+        private bool useJoystick = true;
         private string basePath =
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Model");
 
@@ -34,7 +39,7 @@ namespace _3DViewer.View
         private bool _rotation = false;
         private Point _prevPoint;
 
-        private int _width = 1700;
+        private int _width = 2000;
         private int _height = 1000;
         private float sensitivity = 0.08f;
         byte[] btm;
@@ -65,11 +70,17 @@ namespace _3DViewer.View
         public ICommand SizeChangedCommand { get; }
         public MainVM()
         {
+            if (useJoystick)
+            {
+                _port = new COMmunicationPort();
+                _port.Port.DataReceived += OnDataReceived;
+                _newState = new();
+            }
             _objVertices = _resourcesStreams.GetVertices();
             _mtlInformation = _resourcesStreams.GetMtlInformation(_objVertices);
-            foreach(MtlCharacter mtlCharacter in _mtlInformation.mtlCharacters)
+            foreach (MtlCharacter mtlCharacter in _mtlInformation.mtlCharacters)
             {
-                if(mtlCharacter.mapKa != null)
+                if (mtlCharacter.mapKa != null)
                 {
                     mtlCharacter.kaImage = ReadMap(
                         mtlCharacter.mapKa,
@@ -123,15 +134,69 @@ namespace _3DViewer.View
             MouseMoveCommand = new RelayCommand<Point>((point) => MouseMove(point));
             MouseWheelCommand = new RelayCommand<int>((delta) => MouseWheel(delta));
             SizeChangedCommand = new RelayCommand<Size>((size) => SizeChanged(size));
+            if (_port != null)
+            {
+                _port.Port.Open();
+            }
         }
 
+        private void OnDataReceived(object sender, SerialDataReceivedEventArgs e)
+        {
+            var serialDevice = sender as SerialPort;
+            string message = serialDevice.ReadLine();
+            _newState.RereadState(message);
+            if(Application.Current == null)
+            {
+                _port.Port.Close();
+                return;
+            }
+            Application.Current.Dispatcher.Invoke(new Action(() =>
+            {
+                ProcessState(_newState);
+            }));
+        }
+        private void ProcessState(State state)
+        {
+            float deltaX = state.X - State.CenterX;
+            float deltaY = state.Y - State.CenterY;
+
+            bool xCentered = Math.Abs(deltaX) <= State.centerDelta;
+            bool yCentered = Math.Abs(deltaY) <= State.centerDelta;
+
+
+            if (!(xCentered && yCentered))
+            {
+                state.X = xCentered ? State.CenterX : state.X;
+                state.Y = yCentered ? State.CenterY : state.Y;
+
+                _bitmapGenerator.ReplaceCameraByScreenCoordinates(
+                    State.CenterX,
+                    State.CenterY,
+                    State.CenterX - deltaX / State.bounceDelta,
+                    State.CenterY + deltaY / State.bounceDelta
+                    );
+
+                _newState = state;
+                DrawNewFrame();
+            }
+            if (state.pressedButtons.Contains("D"))
+            {
+                _bitmapGenerator.Scale(sensitivity);
+                DrawNewFrame();
+            }
+            else if (state.pressedButtons.Contains("B"))
+            {
+                _bitmapGenerator.Scale(-sensitivity);
+                DrawNewFrame();
+            }
+        }
         public byte[] ReadMap(string relativePath, out int width, out int height)
         {
             string mtlPath = Path.Combine(basePath, relativePath);
             byte[] res = Array.Empty<byte>();
 
             width = 0;
-            height = 0; 
+            height = 0;
 
             if (File.Exists(mtlPath))
             {

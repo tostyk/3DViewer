@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "3DViewer.Core", "3DViewer.C
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "3DViewer.View", "3DViewer.View\3DViewer.View.csproj", "{0C232E11-2C49-4A8F-9021-6A05C837E048}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "3DViewer.Joystick", "3DViewer.Joystick\3DViewer.Joystick.csproj", "{B60A4B61-D9A9-4BAB-A4F9-852A62865D61}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{0C232E11-2C49-4A8F-9021-6A05C837E048}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0C232E11-2C49-4A8F-9021-6A05C837E048}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0C232E11-2C49-4A8F-9021-6A05C837E048}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B60A4B61-D9A9-4BAB-A4F9-852A62865D61}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B60A4B61-D9A9-4BAB-A4F9-852A62865D61}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B60A4B61-D9A9-4BAB-A4F9-852A62865D61}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B60A4B61-D9A9-4BAB-A4F9-852A62865D61}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

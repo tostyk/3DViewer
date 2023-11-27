@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\3DViewer.Core\3DViewer.Core.csproj" />
+    <ProjectReference Include="..\3DViewer.Joystick\3DViewer.Joystick.csproj" />
   </ItemGroup>
 
   <ItemGroup>
