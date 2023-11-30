@@ -16,6 +16,8 @@ using System.Runtime.InteropServices;
 using _3DViewer.Core.obj_parse;
 using _3DViewer.Joystick;
 using System.IO.Ports;
+using System.Collections.Generic;
+using System.Numerics;
 
 namespace _3DViewer.View
 {
@@ -23,7 +25,7 @@ namespace _3DViewer.View
     {
         private COMmunicationPort? _port;
         private State? _newState;
-        private bool useJoystick = true;
+        private bool useJoystick = false;
         private string basePath =
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Model");
 
@@ -39,7 +41,7 @@ namespace _3DViewer.View
         private bool _rotation = false;
         private Point _prevPoint;
 
-        private int _width = 2000;
+        private int _width = 1200;
         private int _height = 1000;
         private float sensitivity = 0.08f;
         byte[] btm;
@@ -78,6 +80,7 @@ namespace _3DViewer.View
             }
             _objVertices = _resourcesStreams.GetVertices();
             _mtlInformation = _resourcesStreams.GetMtlInformation(_objVertices);
+            BloomCounter.CountGaussian();
             foreach (MtlCharacter mtlCharacter in _mtlInformation.mtlCharacters)
             {
                 if (mtlCharacter.mapKa != null)
@@ -111,8 +114,7 @@ namespace _3DViewer.View
                         out mtlCharacter._widthKe,
                         out mtlCharacter._heightKe
                         );
-
-                    //mtlCharacter.keImage = BloomCounter.GaussianBlur(mtlCharacter.keImage, mtlCharacter._widthKe, mtlCharacter._heightKe);
+                    mtlCharacter.fmapKe = new float[mtlCharacter.keImage.Length];
                 }
                 if (mtlCharacter.norm != null)
                 {
@@ -145,7 +147,7 @@ namespace _3DViewer.View
             var serialDevice = sender as SerialPort;
             string message = serialDevice.ReadLine();
             _newState.RereadState(message);
-            if(Application.Current == null)
+            if (Application.Current == null)
             {
                 _port.Port.Close();
                 return;

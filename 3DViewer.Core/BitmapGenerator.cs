@@ -134,8 +134,7 @@ namespace _3DViewer.Core
             {
                 for (int i = range.Item1; i < range.Item2; i++)
                 {
-                    _worldCoordinates[i] = Vector4.Transform(_modelCoordinates.Vertices[i], currModel *
-                currView);
+                    _worldCoordinates[i] = Vector4.Transform(_modelCoordinates.Vertices[i], currModel * currView);
                     _windowCoordinates[i] = Vector4.Transform(_modelCoordinates.Vertices[i], modelViewProjectionMatrix);
 
                     float w = 1 / _windowCoordinates[i].W;
@@ -211,6 +210,21 @@ namespace _3DViewer.Core
 
             return result;
         }
+        private Vector3 CountTexture(int width, int height, float x, float y, float[] image)
+        {
+            int tx = Convert.ToInt32(Math.Clamp(x * (width - 1), 0, width - 1));
+            int ty = Convert.ToInt32(Math.Clamp((1 - y) * (height - 1), 0, height - 1));
+
+            Vector4 temp = (BloomCounter.GetPixelColor(
+                image,
+                width,
+                tx,
+                ty));
+
+            Vector3 result = new(temp.X, temp.Y, temp.Z);
+
+            return result;
+        }
         private void ClearImage()
         {
             Parallel.ForEach(Partitioner.Create(0, _image.Length / 4), range =>
@@ -276,6 +290,7 @@ namespace _3DViewer.Core
             Vector3 wnc = _modelCoordinates.Normals[normals[2]];
 
             float azw = 1 / _worldCoordinates[vertices[0]].Z;
+
             float bzw = 1 / _worldCoordinates[vertices[1]].Z;
             float czw = 1 / _worldCoordinates[vertices[2]].Z;
 
@@ -414,13 +429,15 @@ namespace _3DViewer.Core
 
                         var diffuse = LightCounter.CountDiffuse(normal, _camera.LightPosition, diffuseAlbedo);
                         var specular = LightCounter.CountSpecular(normal, _camera.LightPosition, -_camera.Position,
-                            specularAlbedo, mtlCharacter.Ns > 0 ? mtlCharacter.Ns : 10f);
+                            specularAlbedo, mtlCharacter.Ns);
 
                         Vector3 fragColor = diffuse + ambient + specular + emission;
 
-                        _brightness[point + 0] = emission.X;
-                        _brightness[point + 1] = emission.Y;
-                        _brightness[point + 2] = emission.Z;
+                        Vector3 blVector = BloomCounter.CountBloom(fragColor) + emission;
+
+                        _brightness[point + 0] = blVector.X;
+                        _brightness[point + 1] = blVector.Y;
+                        _brightness[point + 2] = blVector.Z;
                         _brightness[point + 3] = 1f;
 
                         _colors[point + 0] = fragColor.X;
@@ -428,14 +445,14 @@ namespace _3DViewer.Core
                         _colors[point + 2] = fragColor.Z;
                         _colors[point + 3] = 1f;
 
-                        fragColor = LightCounter.ColorVector3(fragColor);
+                        /*fragColor = LightCounter.ColorVector3(fragColor);
 
                         fragColor *= 255;
 
                         _image[point + 0] = (byte)fragColor.X;
                         _image[point + 1] = (byte)fragColor.Y;
                         _image[point + 2] = (byte)fragColor.Z;
-                        _image[point + 3] = (byte)(255);
+                        _image[point + 3] = (byte)(255);*/
                     }
 
                 }
@@ -457,8 +474,8 @@ namespace _3DViewer.Core
             }
             //bloom start
 
-/*
-            float[] gBl = BloomCounter.GaussianBlur(_brightness, _width, _height);
+            float[] gBl = BloomCounter.ApproxGaussianBlur(_brightness, _width, _height);
+
             Parallel.ForEach(Partitioner.Create(0, _height), range =>
             {
                 for (int y = range.Item1; y < range.Item2; y++)
@@ -471,8 +488,7 @@ namespace _3DViewer.Core
                         BloomCounter.SetPixelColor(_image, _width, x, y, new Vector4(a.X, a.Y, a.Z, 255));
                     }
                 }
-            });*/
-
+            });
 
             //bloom end
         }

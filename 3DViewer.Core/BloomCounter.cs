@@ -1,6 +1,8 @@
-﻿using System;
+﻿using ImageBlur.Core;
+using System;
 using System.Collections.Concurrent;
 using System.Numerics;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace _3DViewer.Core
 {
@@ -9,22 +11,264 @@ namespace _3DViewer.Core
         private static double[] coeffsY = { 0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216 };
         private static double[] coeffsX = { 0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216 };
 
-        public static int extX = 10;
-        public static int extY = 10;
+        public static int extX = 20;
+        public static int extY = 20;
 
-        public static readonly Vector3 BloomBrightness = new Vector3(0.2126f, 0.7152f, 0.0722f);
+        public static readonly Vector3 BloomBrightness = new Vector3(0.0722f, 0.7152f, 0.2126f);
 
         public static Vector3 CountBloom(Vector3 color)
         {
-            Vector3 vector3 = new Vector3(color.X, color.Y, color.Z);
-            float dot = Vector3.Dot(vector3, BloomBrightness);
-            if (dot <= 1.0)
-            {
-                vector3 = new Vector3(0, 0, 0);
-            }
-            return vector3;
+            float br = color.X * BloomBrightness.X + color.Y * BloomBrightness.Y + color.Z * BloomBrightness.Z;
+            return SmoothStep(0, 1, br) * color;
         }
 
+        public static Vector3 SmoothStep(Vector3 edge0, Vector3 edge1, Vector3 val)
+        {
+            Vector3 g = new Vector3(val.X, val.Y, val.Z);
+            g.X = SmoothStep(edge0.X, edge1.X, val.X);
+            g.Y = SmoothStep(edge0.Y, edge1.Y, val.Y);
+            g.Z = SmoothStep(edge0.Z, edge1.Z, val.Z);
+            return g;
+        }
+
+        public static float SmoothStep(float edge0, float edge1, float x)
+        {
+            float g = Math.Clamp((x - edge0)/(edge1 - edge0), edge0, edge1);
+            return g * g * (3.0f - 2.0f * g);
+        }
+
+        public static byte[] BoxBlur(byte[] image, int width, int height, int extX, int extY)
+        {
+            byte[] result = new byte[image.Length];
+            byte[] newImage = ExtendImage(image, width, height, extX, extY);
+            int newWidth = width + 2 * extX;
+            Parallel.ForEach(Partitioner.Create(0, width), range =>
+            {
+                for (int x = range.Item1; x < range.Item2; x++)
+                {
+                    int newX = x + extX;
+                    int newY = extY + 0;
+
+                    Vector4 res = GetPixelColor(newImage, newWidth, newX, newY);
+
+                    for (int i = 1; i <= extY; i++)
+                    {
+                        res += GetPixelColor(newImage, newWidth, newX, newY + i);
+                        res += GetPixelColor(newImage, newWidth, newX, newY - i);
+                    }
+                    res /= (extY * 2 + 1);
+                    SetPixelColor(result, width, x, 0, res);
+
+                    for (int y = 1; y < height; y++)
+                    {
+                        newX = x + extX;
+                        newY = y + extY;
+
+                        Vector4 oldC = GetPixelColor(newImage, newWidth, newX, (newY - 1) - extY) / ((extY * 2 + 1));
+                        Vector4 newC = GetPixelColor(newImage, newWidth, newX, newY + extY) / ((extY * 2 + 1));
+
+                        res += (-oldC + newC);
+
+                        res.X = Math.Clamp(res.X, 0, 255f);
+                        res.Y = Math.Clamp(res.Y, 0, 255f);
+                        res.Z = Math.Clamp(res.Z, 0, 255f);
+                        res.W = Math.Clamp(res.W, 0, 255f);
+
+                        SetPixelColor(result, width, x, y, res);
+                    }
+                }
+            });
+            Parallel.ForEach(Partitioner.Create(0, height), range =>
+            {
+                for (int y = range.Item1; y < range.Item2; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        int newX = x + extX;
+                        int newY = y + extY;
+
+                        SetPixelColor(newImage, newWidth, newX, newY, GetPixelColor(result, width, x, y));
+                    }
+                }
+            });
+            Parallel.ForEach(Partitioner.Create(0, height), range =>
+            {
+                for (int y = range.Item1; y < range.Item2; y++)
+                {
+
+                    int newX = 0 + extX;
+                    int newY = extY + y;
+
+                    Vector4 res = GetPixelColor(newImage, newWidth, newX, newY);
+
+                    for (int i = 1; i <= extX; i++)
+                    {
+                        res += GetPixelColor(newImage, newWidth, newX + i, newY);
+                        res += GetPixelColor(newImage, newWidth, newX - i, newY);
+                    }
+                    res /= ((extX * 2 + 1));
+                    SetPixelColor(result, width, 0, y, res);
+
+                    for (int x = 1; x < width; x++)
+                    {
+                        newX = extX + x;
+                        newY = extY + y;
+
+                        Vector4 oldC = GetPixelColor(newImage, newWidth, (newX - 1) - extX, newY) / (extX * 2 + 1);
+                        Vector4 newC = GetPixelColor(newImage, newWidth, newX + extX, newY) / (extX * 2 + 1);
+
+                        res += (-oldC + newC);
+
+                        res.X = Math.Clamp(res.X, 0, 255f);
+                        res.Y = Math.Clamp(res.Y, 0, 255f);
+                        res.Z = Math.Clamp(res.Z, 0, 255f);
+                        res.W = Math.Clamp(res.W, 0, 255f);
+
+                        SetPixelColor(result, width, x, y, res);
+                    }
+                }
+            });
+            return result;
+        }
+        public static float[] BoxBlur(float[] image, int width, int height, int extX, int extY)
+        {
+            float[] result = new float[image.Length];
+            float[] newImage = ExtendImage(image, width, height, extX, extY);
+            int newWidth = width + 2 * extX;
+            Parallel.ForEach(Partitioner.Create(0, width), range =>
+            {
+                for (int x = range.Item1; x < range.Item2; x++)
+                {
+                    int newX = x + extX;
+                    int newY = extY + 0;
+
+                    Vector4 res = GetPixelColor(newImage, newWidth, newX, newY);
+
+                    for (int i = 1; i <= extY; i++)
+                    {
+                        res += GetPixelColor(newImage, newWidth, newX, newY + i);
+                        res += GetPixelColor(newImage, newWidth, newX, newY - i);
+                    }
+                    res /= (extY * 2 + 1);
+                    SetPixelColor(result, width, x, 0, res);
+
+                    for (int y = 1; y < height; y++)
+                    {
+                        newX = x + extX;
+                        newY = y + extY;
+
+                        Vector4 oldC = GetPixelColor(newImage, newWidth, newX, (newY - 1) - extY) / ((extY * 2 + 1));
+                        Vector4 newC = GetPixelColor(newImage, newWidth, newX, newY + extY) / ((extY * 2 + 1));
+
+                        res += (-oldC + newC);
+
+                        res.X = Math.Clamp(res.X, 0, 1f);
+                        res.Y = Math.Clamp(res.Y, 0, 1f);
+                        res.Z = Math.Clamp(res.Z, 0, 1f);
+                        res.W = Math.Clamp(res.W, 0, 1f);
+
+                        SetPixelColor(result, width, x, y, res);
+                    }
+                }
+            });
+            Parallel.ForEach(Partitioner.Create(0, height), range =>
+            {
+                for (int y = range.Item1; y < range.Item2; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        int newX = x + extX;
+                        int newY = y + extY;
+
+                        SetPixelColor(newImage, newWidth, newX, newY, GetPixelColor(result, width, x, y));
+                    }
+                }
+            });
+            Parallel.ForEach(Partitioner.Create(0, height), range =>
+            {
+                for (int y = range.Item1; y < range.Item2; y++)
+                {
+
+                    int newX = 0 + extX;
+                    int newY = extY + y;
+
+                    Vector4 res = GetPixelColor(newImage, newWidth, newX, newY);
+
+                    for (int i = 1; i <= extX; i++)
+                    {
+                        res += GetPixelColor(newImage, newWidth, newX + i, newY);
+                        res += GetPixelColor(newImage, newWidth, newX - i, newY);
+                    }
+                    res /= ((extX * 2 + 1));
+                    SetPixelColor(result, width, 0, y, res);
+
+                    for (int x = 1; x < width; x++)
+                    {
+                        newX = extX + x;
+                        newY = extY + y;
+
+                        Vector4 oldC = GetPixelColor(newImage, newWidth, (newX - 1) - extX, newY) / (extX * 2 + 1);
+                        Vector4 newC = GetPixelColor(newImage, newWidth, newX + extX, newY) / (extX * 2 + 1);
+
+                        res += (-oldC + newC);
+
+                        res.X = Math.Clamp(res.X, 0, 1f);
+                        res.Y = Math.Clamp(res.Y, 0, 1f);
+                        res.Z = Math.Clamp(res.Z, 0, 1f);
+                        res.W = Math.Clamp(res.W, 0, 1f);
+
+                        SetPixelColor(result, width, x, y, res);
+                    }
+                }
+            });
+            return result;
+        }
+        public static byte[] ApproxGaussianBlur(byte[] image, int width, int height)
+        {
+            byte[] res = image;
+
+            int n = 3;
+            var boxSizesY = GaussBoxesSizes(CountSqrOnExt(extY), n);
+            var boxSizesX = GaussBoxesSizes(CountSqrOnExt(extX), n);
+
+            for (int i = 0; i < n; i++)
+            {
+                int extX = (boxSizesX[i] - 1) / 2;
+                int extY = (boxSizesY[i] - 1) / 2;
+                res = BoxBlur(res, width, height, extX, extY);
+            }
+            return res;
+        }
+        public static float[] ApproxGaussianBlur(float[] image, int width, int height)
+        {
+            float[] res = image;
+
+            int n = 3;
+            var boxSizesY = GaussBoxesSizes(CountSqrOnExt(extY), n);
+            var boxSizesX = GaussBoxesSizes(CountSqrOnExt(extX), n);
+
+            for (int i = 0; i < n; i++)
+            {
+                int extX = (boxSizesX[i] - 1) / 2;
+                int extY = (boxSizesY[i] - 1) / 2;
+                res = BoxBlur(res, width, height, extX, extY);
+            }
+            return res;
+        }
+        private static int[] GaussBoxesSizes(double sqrS, int n)
+        {
+            int[] res = new int[n];
+            int boxSize =
+                Convert.ToInt32(Math.Round(Math.Sqrt(12 * sqrS / n + 1), MidpointRounding.ToNegativeInfinity));
+            if (boxSize % 2 == 0) boxSize++;
+
+            for (int i = 0; i < n; i++)
+            {
+                res[i] = boxSize;
+            }
+
+            return res;
+        }
         public static float[] GaussianBlur(float[] image, int width, int height)
         {
             float[] res = new float[width * height * 4];

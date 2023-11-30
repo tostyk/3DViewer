@@ -122,6 +122,9 @@ namespace _3DViewer.Core.obj_parse
         public int _widthKs;
         public int _widthKa;
         public int _widthKe;
+
+        public float[] fmapKe;
+
         public int _widthNorm;
 
         public int _heightKd;
@@ -140,6 +143,6 @@ namespace _3DViewer.Core.obj_parse
         public Vector3 Kd = new(0f, 0f, 0f);
         public Vector3 Ks = new(1f, 1f, 1f);
         public Vector3 Ke = new(0f, 0f, 0f);
-        public float Ns;
+        public float Ns = 100;
     }
 }
